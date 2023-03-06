@@ -28,6 +28,10 @@ button:hover {
   opacity: 1;
 }
 
+h1 {
+  color: black;
+}
+
 li {
   list-style: none;
 }
