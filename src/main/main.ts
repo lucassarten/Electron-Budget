@@ -11,12 +11,6 @@ class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
     autoUpdater.logger = log;
-    autoUpdater.setFeedURL({
-      repo: 'Electron-Budget',
-      owner: 'lucassarten',
-      provider: 'github',
-    });
-
     autoUpdater.checkForUpdatesAndNotify();
   }
 }
