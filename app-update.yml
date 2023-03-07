@@ -1,0 +1,4 @@
+provider: generic
+url: https://hazel-update-server-two.vercel.app/files
+useMultipleRangeRequest: false
+channel: latest

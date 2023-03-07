@@ -1,7 +1,7 @@
 /* eslint global-require: off, no-console: off, promise/always-return: off */
 
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
@@ -11,15 +11,15 @@ const server = 'https://hazel-update-server-two.vercel.app';
 const url = `${server}/files`;
 const UPDATE_CHECK_INTERVAL = 10 * 60 * 1000;
 
-Object.defineProperty(app, 'isPackaged', {
-  get() {
-    return true;
-  },
-});
+// Object.defineProperty(app, 'isPackaged', {
+//   get() {
+//     return true;
+//   },
+// });
 
 setInterval(() => {
   console.log('Checking for updates...');
-  autoUpdater.checkForUpdatesAndNotify();
+  autoUpdater.checkForUpdates();
 }, UPDATE_CHECK_INTERVAL);
 
 class AppUpdater {
@@ -31,9 +31,29 @@ class AppUpdater {
       url,
     });
     console.log('Checking for updates...');
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdates();
   }
 }
+
+autoUpdater.on('update-downloaded', () => {
+  const dialogOpts = {
+    type: 'info',
+    buttons: ['Restart', 'Later'],
+    title: 'Electron Budget Update',
+    message: 'Update available',
+    detail:
+      'New version of Electron Budget is available. Restart the application to apply the update.',
+  };
+  dialog
+    .showMessageBox(dialogOpts)
+    .then(({ response }) => {
+      if (response === 0) {
+        return autoUpdater.quitAndInstall();
+      }
+      return null;
+    })
+    .catch(() => null);
+});
 
 let mainWindow: BrowserWindow | null = null;
 
