@@ -7,9 +7,15 @@ import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
-const server = 'https://electron-budget.vercel.app';
-const url = `${server}/update/${process.platform}/${app.getVersion()}`;
+const server = 'https://hazel-update-server-two.vercel.app';
+const url = `${server}/files`;
 const UPDATE_CHECK_INTERVAL = 10 * 60 * 1000;
+
+Object.defineProperty(app, 'isPackaged', {
+  get() {
+    return true;
+  },
+});
 
 setInterval(() => {
   console.log('Checking for updates...');
@@ -20,7 +26,10 @@ class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
     autoUpdater.logger = log;
-    autoUpdater.setFeedURL(url);
+    autoUpdater.setFeedURL({
+      provider: 'generic',
+      url,
+    });
     console.log('Checking for updates...');
     autoUpdater.checkForUpdatesAndNotify();
   }
