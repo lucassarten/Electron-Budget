@@ -7,10 +7,21 @@ import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
+const server = 'https://electron-budget.vercel.app';
+const url = `${server}/update/${process.platform}/${app.getVersion()}`;
+const UPDATE_CHECK_INTERVAL = 10 * 60 * 1000;
+
+setInterval(() => {
+  console.log('Checking for updates...');
+  autoUpdater.checkForUpdatesAndNotify();
+}, UPDATE_CHECK_INTERVAL);
+
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
     autoUpdater.logger = log;
+    autoUpdater.setFeedURL(url);
+    console.log('Checking for updates...');
     autoUpdater.checkForUpdatesAndNotify();
   }
 }
