@@ -7,9 +7,28 @@ import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
+// auto update config, its defined in app-update.yml anyway but I guess is needed here too
 const server = 'https://hazel-update-server-two.vercel.app';
 const url = `${server}/files`;
 const UPDATE_CHECK_INTERVAL = 10 * 60 * 1000;
+
+// sqlite3 db setup
+const sqlite3 = require('sqlite3');
+
+const db = new sqlite3.Database('user.db');
+db.serialize(() => {
+  db.run(
+    'CREATE TABLE IF NOT EXISTS Transactions (date, description, amount, category)'
+  );
+});
+
+ipcMain.handle('db-query', async (event, sqlQuery) => {
+  return new Promise((resolve) => {
+    db.all(sqlQuery, (err: any, rows: unknown) => {
+      resolve(rows);
+    });
+  });
+});
 
 // Object.defineProperty(app, 'isPackaged', {
 //   get() {
@@ -105,6 +124,8 @@ const createWindow = async () => {
     show: false,
     width: 1024,
     height: 728,
+    minWidth: 750,
+    minHeight: 750,
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: app.isPackaged
