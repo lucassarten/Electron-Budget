@@ -1,22 +1,28 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { useState } from 'react';
+
 import './App.css';
+import './TransactionsTable.css';
+import './TabBar.css';
+import './Dashboard.css';
+import TransactionsTable from './TransactionsTable';
+import Dashboard from './Dashboard';
 
 type Tab = 'dashboard' | 'income' | 'expenses' | 'budgetTargets';
 
-function Dashboard() {
-  return <h1>Dashboard view</h1>;
+function DashboardView() {
+  return <Dashboard />;
 }
 
-function Income() {
-  return <h1>Income view</h1>;
+function IncomeView() {
+  return <TransactionsTable />;
 }
 
-function Expenses() {
+function ExpensesView() {
   return <h1>Expenses view</h1>;
 }
 
-function BudgetTargets() {
+function BudgetTargetsView() {
   return <h1>Budget Targets view</h1>;
 }
 
@@ -32,38 +38,46 @@ function MainLayout() {
       <div className="tabs">
         <button
           type="button"
-          className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+          id="tab"
+          className={`tab-dashboard ${
+            activeTab === 'dashboard' ? 'active' : ''
+          }`}
           onClick={() => handleTabClick('dashboard')}
         >
           Dashboard
         </button>
         <button
           type="button"
-          className={`tab ${activeTab === 'income' ? 'active' : ''}`}
+          id="tab"
+          className={`tab-income ${activeTab === 'income' ? 'active' : ''}`}
           onClick={() => handleTabClick('income')}
         >
           Income
         </button>
         <button
           type="button"
-          className={`tab ${activeTab === 'expenses' ? 'active' : ''}`}
+          id="tab"
+          className={`tab-expenses ${activeTab === 'expenses' ? 'active' : ''}`}
           onClick={() => handleTabClick('expenses')}
         >
           Expenses
         </button>
         <button
           type="button"
-          className={`tab ${activeTab === 'budgetTargets' ? 'active' : ''}`}
+          id="tab"
+          className={`tab-budgetTargets ${
+            activeTab === 'budgetTargets' ? 'active' : ''
+          }`}
           onClick={() => handleTabClick('budgetTargets')}
         >
           Budget Targets
         </button>
       </div>
 
-      {activeTab === 'dashboard' && <Dashboard />}
-      {activeTab === 'income' && <Income />}
-      {activeTab === 'expenses' && <Expenses />}
-      {activeTab === 'budgetTargets' && <BudgetTargets />}
+      {activeTab === 'dashboard' && <DashboardView />}
+      {activeTab === 'income' && <IncomeView />}
+      {activeTab === 'expenses' && <ExpensesView />}
+      {activeTab === 'budgetTargets' && <BudgetTargetsView />}
     </div>
   );
 }

@@ -1,0 +1,47 @@
+.tab-dashboard {
+  background-color: #2E5B9E;
+}
+
+.tab-dashboard:hover {
+  background-color: #4276b9;
+}
+
+.tab-dashboard.active {
+  background-color: #4276b9;
+}
+
+.tab-income {
+  background-color: #75A52E;
+}
+
+.tab-income:hover {
+  background-color: #83b834;
+}
+
+.tab-income.active {
+  background-color: #83b834;
+}
+
+.tab-expenses {
+  background-color: #A63D26;
+}
+
+.tab-expenses:hover {
+  background-color: #be492f;
+}
+
+.tab-expenses.active {
+  background-color: #be492f;
+}
+
+.tab-budgetTargets {
+  background-color: #6226a6;
+}
+
+.tab-budgetTargets:hover {
+  background-color: #7d34c7;
+}
+
+.tab-budgetTargets.active {
+  background-color: #7d34c7;
+}
