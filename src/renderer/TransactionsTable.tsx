@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import MaterialReactTable, {
   MaterialReactTableProps,
   MRT_Cell,
@@ -79,7 +79,7 @@ export function AddTransactionModal({
               gap: '1.5rem',
             }}
           >
-            {columns.map((column) => (
+            {columns.slice(1, 4).map((column) => (
               <TextField
                 key={column.accessorKey}
                 label={column.header}
@@ -88,6 +88,24 @@ export function AddTransactionModal({
                   setValues({ ...values, [e.target.name]: e.target.value })
                 }
               />
+              // catergory dropdown
+            ))}
+            {columns.slice(4).map((column) => (
+              <TextField
+                key={column.accessorKey}
+                label={column.header}
+                name={column.accessorKey}
+                onChange={(e) =>
+                  setValues({ ...values, [e.target.name]: e.target.value })
+                }
+                select
+              >
+                {categoires.map((category) => (
+                  <MenuItem key={category} value={category}>
+                    {category}
+                  </MenuItem>
+                ))}
+              </TextField>
             ))}
           </Stack>
         </form>
@@ -102,75 +120,31 @@ export function AddTransactionModal({
   );
 }
 
-function TransactionsTable() {
-  const data = useMemo<Transaction[]>(() => {
-    return [
-      {
-        id: '1',
-        date: '2021-01-01',
-        description: 'Groceries',
-        amount: 100,
-        category: 'Food',
-      },
-      {
-        id: '2',
-        date: '2021-01-02',
-        description: 'Rent',
-        amount: 1000,
-        category: 'Rent',
-      },
-      {
-        id: '2',
-        date: '2021-01-02',
-        description: 'Rent',
-        amount: 1000,
-        category: 'Rent',
-      },
-      {
-        id: '2',
-        date: '2021-01-02',
-        description: 'Rent',
-        amount: 1000,
-        category: 'Rent',
-      },
-      {
-        id: '2',
-        date: '2021-01-02',
-        description: 'Rent',
-        amount: 1000,
-        category: 'Rent',
-      },
-      {
-        id: '2',
-        date: '2021-01-02',
-        description: 'Rent',
-        amount: 1000,
-        category: 'Rent',
-      },
-      {
-        id: '2',
-        date: '2021-01-02',
-        description: 'Rent',
-        amount: 1000,
-        category: 'Rent',
-      },
-      {
-        id: '4',
-        date: '2021-01-02',
-        description: 'Rent',
-        amount: 1000,
-        category: 'Rent',
-      },
-    ];
-  }, []);
+function TransactionsTable({ filter }: any) {
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [tableData, setTableData] = useState<Transaction[]>(() => data);
+  const [tableData, setTableData] = useState<Transaction[]>([]);
   const [validationErrors, setValidationErrors] = useState<{
     [cellId: string]: string;
   }>({});
 
+  useEffect(() => {
+    let data: Transaction[] = [];
+    // get positive transactions from db
+    const query = `SELECT * FROM Transactions WHERE ${filter as string}`;
+    window.electron.ipcRenderer.sendMessage('db-query', [query]);
+    // wait for response
+    window.electron.ipcRenderer.once('db-query', (resp) => {
+      // cast response to array of transactions
+      data = resp as Transaction[];
+      setTableData(data);
+    });
+  }, [filter]);
+
   const handleCreateNewRow = (values: Transaction) => {
     tableData.push(values);
+    // insert row into db
+    const query = `INSERT INTO Transactions (date, description, amount, category) VALUES ('${values.date}', '${values.description}', ${values.amount}, '${values.category}')`;
+    window.electron.ipcRenderer.sendMessage('db-query', [query]);
     setTableData([...tableData]);
   };
 
@@ -178,7 +152,9 @@ function TransactionsTable() {
     async ({ exitEditingMode, row, values }) => {
       if (!Object.keys(validationErrors).length) {
         tableData[row.index] = values;
-        // send/receive api updates here, then refetch or update local table data for re-render
+        // update row in db
+        const query = `UPDATE Transactions SET date = '${values.date}', description = '${values.description}', amount = ${values.amount}, category = '${values.category}' WHERE id = ${values.id}`;
+        window.electron.ipcRenderer.sendMessage('db-query', [query]);
         setTableData([...tableData]);
         exitEditingMode(); // required to exit editing mode and close modal
       }
@@ -190,7 +166,9 @@ function TransactionsTable() {
 
   const handleDeleteRow = useCallback(
     (row: MRT_Row<Transaction>) => {
-      // send api delete request here, then refetch or update local table data for re-render
+      // delete row from db
+      const query = `DELETE FROM Transactions WHERE id = ${row.original.id}`;
+      window.electron.ipcRenderer.sendMessage('db-query', [query]);
       tableData.splice(row.index, 1);
       setTableData([...tableData]);
     },
@@ -237,14 +215,27 @@ function TransactionsTable() {
         accessorKey: 'id',
         header: 'ID',
         enableColumnOrdering: false,
-        enableEditing: false, // disable editing on this column
+        enableEditing: false,
         enableSorting: false,
-        size: 80,
+        size: 50,
+        hide: true, // no clue why this doesn't work so will have to do below
+        // hide header
+        muiTableHeadCellProps: {
+          style: {
+            display: 'none',
+          },
+        },
+        // hide cell
+        muiTableBodyCellProps: {
+          style: {
+            display: 'none',
+          },
+        },
       },
       {
         accessorKey: 'date',
         header: 'Date',
-        size: 140,
+        size: 100,
         muiTableBodyCellEditTextFieldProps: ({ cell }) => ({
           ...getCommonEditTextFieldProps(cell),
         }),
@@ -252,7 +243,7 @@ function TransactionsTable() {
       {
         accessorKey: 'description',
         header: 'Description',
-        size: 140,
+        size: 250,
         muiTableBodyCellEditTextFieldProps: ({ cell }) => ({
           ...getCommonEditTextFieldProps(cell),
         }),
@@ -260,6 +251,7 @@ function TransactionsTable() {
       {
         accessorKey: 'amount',
         header: 'Amount',
+        size: 50,
         muiTableBodyCellEditTextFieldProps: ({ cell }) => ({
           ...getCommonEditTextFieldProps(cell),
         }),
@@ -267,8 +259,9 @@ function TransactionsTable() {
       {
         accessorKey: 'category',
         header: 'Category',
+        size: 50,
         muiTableBodyCellEditTextFieldProps: {
-          select: false,
+          select: true,
           children: categoires.map((state) => (
             <MenuItem key={state} value={state}>
               {state}

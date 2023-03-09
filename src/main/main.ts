@@ -18,16 +18,9 @@ const sqlite3 = require('sqlite3');
 const db = new sqlite3.Database('user.db');
 db.serialize(() => {
   db.run(
-    'CREATE TABLE IF NOT EXISTS Transactions (date, description, amount, category)'
+    'CREATE TABLE IF NOT EXISTS Transactions (id INTEGER PRIMARY KEY, date TEXT NOT NULL, description TEXT, amount INTEGER NOT NULL, category TEXT)'
   );
-});
-
-ipcMain.handle('db-query', async (event, sqlQuery) => {
-  return new Promise((resolve) => {
-    db.all(sqlQuery, (err: any, rows: unknown) => {
-      resolve(rows);
-    });
-  });
+  db.run('PRAGMA journal_mode = DELETE');
 });
 
 // Object.defineProperty(app, 'isPackaged', {
@@ -80,6 +73,23 @@ ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
+});
+
+ipcMain.on('db-query', async (event, sqlQuery) => {
+  // query the db
+  const result = await new Promise((resolve, reject) => {
+    db.all(sqlQuery.toString(), [], (err: any, rows: unknown) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  }).catch((err: any) => {
+    console.log(err);
+  });
+  // send the result back to the renderer
+  event.reply('db-query', result);
 });
 
 if (process.env.NODE_ENV === 'production') {
