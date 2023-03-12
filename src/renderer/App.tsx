@@ -15,11 +15,11 @@ function DashboardView() {
 }
 
 function IncomeView() {
-  return <TransactionsTable filter="amount > 0" />;
+  return <TransactionsTable type="income" />;
 }
 
 function ExpensesView() {
-  return <TransactionsTable filter="amount < 0" />;
+  return <TransactionsTable type="expense" />;
 }
 
 function BudgetTargetsView() {

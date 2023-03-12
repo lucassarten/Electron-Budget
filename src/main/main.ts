@@ -65,7 +65,11 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate('pong'));
 });
 
-ipcMain.on('db-query', async (event, sqlQuery) => {
+ipcMain.on('db-query', async (event, args) => {
+  // record time taken for query
+  const start = Date.now();
+  const sqlQuery = args[0];
+  const id = args[1];
   // query the db
   const result = await new Promise((resolve, reject) => {
     db.all(sqlQuery.toString(), [], (err: any, rows: unknown) => {
@@ -78,8 +82,10 @@ ipcMain.on('db-query', async (event, sqlQuery) => {
   }).catch((err: any) => {
     console.log(err);
   });
+  // log time taken
+  console.log(`Query took ${Date.now() - start}ms`);
   // send the result back to the renderer
-  event.reply('db-query', result);
+  event.reply(`db-query-${id}`, result);
 });
 
 if (process.env.NODE_ENV === 'production') {

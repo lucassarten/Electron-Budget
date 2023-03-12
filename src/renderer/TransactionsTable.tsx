@@ -1,25 +1,20 @@
+/* eslint-disable no-nested-ternary */
 /* eslint-disable camelcase */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import MaterialReactTable, {
-  MaterialReactTableProps,
   MRT_Cell,
   MRT_ColumnDef,
-  MRT_Row,
 } from 'material-react-table';
 import {
-  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   MenuItem,
   Stack,
   TextField,
-  Tooltip,
 } from '@mui/material';
-import { Delete, Edit } from '@mui/icons-material';
 
 export type Transaction = {
   id: string;
@@ -27,6 +22,12 @@ export type Transaction = {
   description: string;
   amount: number;
   category: string;
+};
+
+type Category = {
+  id: string;
+  name: string;
+  type: string;
 };
 
 const formatCurrency = (value: number) => {
@@ -46,6 +47,10 @@ const validateAmount = (value: string) => {
   const number = Number(value);
   return !Number.isNaN(number);
 };
+const validateCategory = (value: string, categories: Category[]) => {
+  const category = categories.find((c) => c.name === value);
+  return !!category;
+};
 
 interface CreateModalProps {
   columns: MRT_ColumnDef<Transaction>[];
@@ -53,7 +58,8 @@ interface CreateModalProps {
   // eslint-disable-next-line no-unused-vars
   onSubmit: (values: Transaction) => void;
   open: boolean;
-  categories: string[];
+  categories: Category[];
+  type: string;
 }
 
 export function AddTransactionModal({
@@ -62,6 +68,7 @@ export function AddTransactionModal({
   onClose,
   onSubmit,
   categories,
+  type,
 }: CreateModalProps) {
   const [values, setValues] = useState<any>(() =>
     columns.reduce((acc, column) => {
@@ -109,9 +116,13 @@ export function AddTransactionModal({
                 }
                 select
               >
-                {categories.map((category) => (
-                  <MenuItem key={category} value={category}></MenuItem>
-                ))}
+                {categories
+                  .filter((category) => category.type === type)
+                  .map((category) => (
+                    <MenuItem key={category.id} value={category.name}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
               </TextField>
             ))}
           </Stack>
@@ -127,35 +138,38 @@ export function AddTransactionModal({
   );
 }
 
-function TransactionsTable({ filter }: any) {
+function TransactionsTable({ type }: any) {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [tableData, setTableData] = useState<Transaction[]>([]);
   const [validationErrors, setValidationErrors] = useState<{
     [cellId: string]: string;
   }>({});
-  const [categories, setcategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    let data: Transaction[] = [];
-    // get positive transactions from db
-    const query = `SELECT * FROM Transactions WHERE ${filter as string}`;
-    window.electron.ipcRenderer.sendMessage('db-query', [query]);
-    // wait for response
-    window.electron.ipcRenderer.once('db-query', (resp) => {
-      // cast response to array of transactions
-      data = resp as Transaction[];
-      setTableData(data);
+    window.electron.ipcRenderer.once('db-query-transactions', (resp) => {
+      const response = resp as Transaction[];
+      setTableData(response);
+    });
+    window.electron.ipcRenderer.once('db-query-categories', (resp) => {
+      const response = resp as Category[];
+      setCategories(response);
     });
     // get categories from db
     window.electron.ipcRenderer.sendMessage('db-query', [
-      'SELECT * FROM Categories',
+      `SELECT * FROM Categories WHERE ${
+        type === 'income' ? 'type = "income"' : 'type = "expense"'
+      }`,
+      'categories',
     ]);
-    // wait for response
-    window.electron.ipcRenderer.once('db-query', (resp) => {
-      // cast response to array of categories
-      setcategories(resp as string[]);
-    });
-  }, [filter]);
+    // get positive transactions from db
+    window.electron.ipcRenderer.sendMessage('db-query', [
+      `SELECT * FROM Transactions WHERE ${
+        type === 'income' ? 'amount > 0' : 'amount < 0'
+      }`,
+      'transactions',
+    ]);
+  }, [type]);
 
   const handleCreateNewRow = (values: Transaction) => {
     tableData.push(values);
@@ -165,28 +179,34 @@ function TransactionsTable({ filter }: any) {
     setTableData([...tableData]);
   };
 
-  const handleSaveRowEdits: MaterialReactTableProps<Transaction>['onEditingRowSave'] =
-    async ({ exitEditingMode, row, values }) => {
-      if (!Object.keys(validationErrors).length) {
-        tableData[row.index] = values;
-        // update row in db
-        const query = `UPDATE Transactions SET date = '${values.date}', description = '${values.description}', amount = ${values.amount}, category = '${values.category}' WHERE id = ${values.id}`;
-        window.electron.ipcRenderer.sendMessage('db-query', [query]);
-        setTableData([...tableData]);
-        exitEditingMode(); // required to exit editing mode and close modal
+  const handleSaveCell = useCallback(
+    (cell: MRT_Cell<Transaction>, value: any) => {
+      // there is probably a better way to do this
+      switch (cell.column.id) {
+        case 'date':
+          tableData[cell.row.index].date = value;
+          break;
+        case 'description':
+          tableData[cell.row.index].description = value;
+          break;
+        case 'amount':
+          tableData[cell.row.index].amount = value;
+          break;
+        case 'category':
+          tableData[cell.row.index].category = value;
+          break;
+        default:
+          break;
       }
-    };
-
-  const handleCancelRowEdits = () => {
-    setValidationErrors({});
-  };
-
-  const handleDeleteRow = useCallback(
-    (row: MRT_Row<Transaction>) => {
-      // delete row from db
-      const query = `DELETE FROM Transactions WHERE id = ${row.original.id}`;
+      // update row in db
+      const query = `UPDATE Transactions SET date = '${
+        tableData[cell.row.index].date
+      }', description = '${tableData[cell.row.index].description}', amount = ${
+        tableData[cell.row.index].amount
+      }, category = '${tableData[cell.row.index].category}' WHERE id = ${
+        tableData[cell.row.index].id
+      }`;
       window.electron.ipcRenderer.sendMessage('db-query', [query]);
-      tableData.splice(row.index, 1);
       setTableData([...tableData]);
     },
     [tableData]
@@ -199,13 +219,20 @@ function TransactionsTable({ filter }: any) {
       return {
         error: !!validationErrors[cell.id],
         helperText: validationErrors[cell.id],
-        onBlur: (event) => {
+        onFocus: () => {
+          delete validationErrors[cell.id];
+          setValidationErrors({
+            ...validationErrors,
+          });
+        },
+        onChange: (event) => {
           const isValid =
-            // eslint-disable-next-line no-nested-ternary
             cell.column.id === 'date'
               ? validateDate(event.target.value)
               : cell.column.id === 'amount'
               ? validateAmount(event.target.value)
+              : cell.column.id === 'category'
+              ? validateCategory(event.target.value, categories)
               : validateRequired(event.target.value);
           if (!isValid) {
             // set validation error for cell if invalid
@@ -221,9 +248,22 @@ function TransactionsTable({ filter }: any) {
             });
           }
         },
+        onBlur: (event) => {
+          const isValid =
+            cell.column.id === 'date'
+              ? validateDate(event.target.value)
+              : cell.column.id === 'amount'
+              ? validateAmount(event.target.value)
+              : cell.column.id === 'category'
+              ? validateCategory(event.target.value, categories)
+              : validateRequired(event.target.value);
+          if (isValid) {
+            handleSaveCell(cell, event.target.value);
+          }
+        },
       };
     },
-    [validationErrors]
+    [categories, handleSaveCell, validationErrors]
   );
 
   const columns = useMemo<MRT_ColumnDef<Transaction>[]>(
@@ -279,51 +319,32 @@ function TransactionsTable({ filter }: any) {
         accessorKey: 'category',
         header: 'Category',
         size: 50,
-        muiTableBodyCellEditTextFieldProps: {
+        muiTableBodyCellEditTextFieldProps: ({ cell }) => ({
           select: true,
-          children: categories.map((state) => (
-            <MenuItem key={state} value={state} />
-          )),
-        },
+          children: categories
+            .filter((category) => category.type === type)
+            .map((category) => (
+              <MenuItem key={category.id} value={category.name}>
+                {category.name}
+              </MenuItem>
+            )),
+          ...getCommonEditTextFieldProps(cell),
+        }),
       },
     ],
-    [categories, getCommonEditTextFieldProps]
+    [categories, getCommonEditTextFieldProps, type]
   );
 
   return (
     <div className="transactions-table">
       <MaterialReactTable
-        displayColumnDefOptions={{
-          'mrt-row-actions': {
-            muiTableHeadCellProps: {
-              align: 'center',
-            },
-            size: 120,
-          },
-        }}
         enableStickyHeader
         enablePagination={false}
         columns={columns}
         data={tableData}
-        editingMode="modal" // default
         enableColumnOrdering
+        editingMode="cell"
         enableEditing
-        onEditingRowSave={handleSaveRowEdits}
-        onEditingRowCancel={handleCancelRowEdits}
-        renderRowActions={({ row, table }) => (
-          <Box sx={{ display: 'flex', gap: '1rem' }}>
-            <Tooltip arrow placement="left" title="Edit">
-              <IconButton onClick={() => table.setEditingRow(row)}>
-                <Edit />
-              </IconButton>
-            </Tooltip>
-            <Tooltip arrow placement="right" title="Delete">
-              <IconButton color="error" onClick={() => handleDeleteRow(row)}>
-                <Delete />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        )}
         renderTopToolbarCustomActions={() => (
           <button
             className="button-add-transaction"
@@ -341,6 +362,7 @@ function TransactionsTable({ filter }: any) {
         onClose={() => setCreateModalOpen(false)}
         onSubmit={handleCreateNewRow}
         categories={categories}
+        type={type}
       />
     </div>
   );

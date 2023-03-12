@@ -68,17 +68,18 @@ function importFile(fileName: string, type: string) {
           row[2],
         ]);
       });
-      // add to db
-      content.forEach((row) => {
-        db.run(
-          'INSERT INTO Transactions (date, description, amount, category) VALUES (?, ?, ?, ?)',
-          row,
-          (err: any) => {
-            if (err) {
-              console.log(err);
-            }
-          }
-        );
+      // add default category
+      content = content.map((row) => [...row, '❓ Other']);
+      // add to db in a transaction
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        content.forEach((row) => {
+          db.run(
+            'INSERT INTO Transactions (date, description, amount, category) VALUES (?, ?, ?, ?)',
+            row
+          );
+        });
+        db.run('COMMIT');
       });
     });
 }
