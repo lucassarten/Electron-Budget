@@ -53,6 +53,7 @@ interface CreateModalProps {
   // eslint-disable-next-line no-unused-vars
   onSubmit: (values: Transaction) => void;
   open: boolean;
+  categories: string[];
 }
 
 export function AddTransactionModal({
@@ -60,6 +61,7 @@ export function AddTransactionModal({
   columns,
   onClose,
   onSubmit,
+  categories,
 }: CreateModalProps) {
   const [values, setValues] = useState<any>(() =>
     columns.reduce((acc, column) => {
@@ -67,19 +69,6 @@ export function AddTransactionModal({
       return acc;
     }, {} as any)
   );
-  const [categoires, setCategoires] = useState<string[]>([]);
-
-  useEffect(() => {
-    // get categories from db
-    window.electron.ipcRenderer.sendMessage('db-query', [
-      'SELECT * FROM Categories',
-    ]);
-    // wait for response
-    window.electron.ipcRenderer.once('db-query', (resp) => {
-      // cast response to array of categories
-      setCategoires(resp as string[]);
-    });
-  }, []);
 
   const handleSubmit = () => {
     // put your validation logic here
@@ -120,10 +109,8 @@ export function AddTransactionModal({
                 }
                 select
               >
-                {categoires.map((category) => (
-                  <MenuItem key={category} value={category}>
-                    {category}
-                  </MenuItem>
+                {categories.map((category) => (
+                  <MenuItem key={category} value={category}></MenuItem>
                 ))}
               </TextField>
             ))}
@@ -146,7 +133,7 @@ function TransactionsTable({ filter }: any) {
   const [validationErrors, setValidationErrors] = useState<{
     [cellId: string]: string;
   }>({});
-  const [categoires, setCategoires] = useState<string[]>([]);
+  const [categories, setcategories] = useState<string[]>([]);
 
   useEffect(() => {
     let data: Transaction[] = [];
@@ -166,7 +153,7 @@ function TransactionsTable({ filter }: any) {
     // wait for response
     window.electron.ipcRenderer.once('db-query', (resp) => {
       // cast response to array of categories
-      setCategoires(resp as string[]);
+      setcategories(resp as string[]);
     });
   }, [filter]);
 
@@ -294,15 +281,13 @@ function TransactionsTable({ filter }: any) {
         size: 50,
         muiTableBodyCellEditTextFieldProps: {
           select: true,
-          children: categoires.map((state) => (
-            <MenuItem key={state} value={state}>
-              {state}
-            </MenuItem>
+          children: categories.map((state) => (
+            <MenuItem key={state} value={state} />
           )),
         },
       },
     ],
-    [categoires, getCommonEditTextFieldProps]
+    [categories, getCommonEditTextFieldProps]
   );
 
   return (
@@ -355,6 +340,7 @@ function TransactionsTable({ filter }: any) {
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onSubmit={handleCreateNewRow}
+        categories={categories}
       />
     </div>
   );
