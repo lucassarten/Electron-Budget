@@ -1,8 +1,96 @@
-import { app, Menu, BrowserWindow, MenuItemConstructorOptions } from 'electron';
+import {
+  app,
+  Menu,
+  BrowserWindow,
+  MenuItemConstructorOptions,
+  dialog,
+} from 'electron';
+import { parse } from 'csv-parse';
+import db from './db';
+
+const fs = require('fs');
+
+// specific references to ignore, these are transfers between my own accounts for example, these rows are dropped
+const ignore = [
+  'Tf To',
+  'Tf Fr',
+  'T/f from',
+  'T/f to',
+  'TRANSFER TO',
+  'TRANSFER FROM',
+];
+// specific phrases to remove, these rows aren't dropped just cleaned for the below strings
+const remove = [';Ref:', ';Particulars:', ';Balance:', ';'];
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
   submenu?: DarwinMenuItemConstructorOptions[] | Menu;
+}
+
+function importFile(fileName: string, type: string) {
+  // read file contents
+  let content: string[][] = [];
+  fs.createReadStream(fileName)
+    .pipe(parse({ delimiter: ',' }))
+    .on('data', (row: string[]) => {
+      content.push(row);
+    })
+    .on('end', () => {
+      // drop header row
+      content = content.slice(1);
+      if (type === 'TSB') {
+        // format columns
+        content = content.map((row) => [
+          row[0].trim(),
+          row[2].trim() + row[3].trim(),
+          row[1].trim(),
+        ]);
+        // convert to date format d-m-yyyy
+        content = content.map((row) => {
+          const date = row[0].split('/');
+          return [`${date[1]}-${date[0]}-${date[2]}`, row[1], row[2]];
+        });
+      } else if (type === 'KiwiBank') {
+        // format columns
+        content = content.map((row) => [
+          row[1].trim(),
+          row[2].trim(),
+          row[14].trim(),
+        ]);
+      }
+      // remove ignored rows
+      content = content.filter((row) => !ignore.includes(row[1]));
+      // remove unwanted strings
+      remove.forEach((str) => {
+        content = content.map((row) => [
+          row[0],
+          row[1].replace(str, ''),
+          row[2],
+        ]);
+      });
+      // add to db
+      content.forEach((row) => {
+        db.run(
+          'INSERT INTO Transactions (date, description, amount, category) VALUES (?, ?, ?, ?)',
+          row,
+          (err: any) => {
+            if (err) {
+              console.log(err);
+            }
+          }
+        );
+      });
+    });
+}
+
+function selectFile(type: string) {
+  const result = dialog.showOpenDialogSync({
+    properties: ['openFile'],
+    filters: [{ name: 'CSV', extensions: ['csv'] }],
+  });
+  if (result) {
+    importFile(result[0], type);
+  }
 }
 
 export default class MenuBuilder {
@@ -161,10 +249,6 @@ export default class MenuBuilder {
         label: '&File',
         submenu: [
           {
-            label: '&Open',
-            accelerator: 'Ctrl+O',
-          },
-          {
             label: '&Close',
             accelerator: 'Ctrl+W',
             click: () => {
@@ -205,6 +289,13 @@ export default class MenuBuilder {
               ]
             : [
                 {
+                  label: '&Reload',
+                  accelerator: 'Ctrl+R',
+                  click: () => {
+                    this.mainWindow.webContents.reload();
+                  },
+                },
+                {
                   label: 'Toggle &Full Screen',
                   accelerator: 'F11',
                   click: () => {
@@ -214,6 +305,23 @@ export default class MenuBuilder {
                   },
                 },
               ],
+      },
+      {
+        label: '&Import',
+        submenu: [
+          {
+            label: '&TSB CSV File',
+            click: () => {
+              selectFile('TSB');
+            },
+          },
+          {
+            label: '&KiwiBank CSV File',
+            click: () => {
+              selectFile('KiwiBank');
+            },
+          },
+        ],
       },
     ];
 

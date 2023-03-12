@@ -6,22 +6,12 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import db from './db';
 
 // auto update config, its defined in app-update.yml anyway but I guess is needed here too
 const server = 'https://hazel-update-server-two.vercel.app';
 const url = `${server}/files`;
 const UPDATE_CHECK_INTERVAL = 10 * 60 * 1000;
-
-// sqlite3 db setup
-const sqlite3 = require('sqlite3');
-
-const db = new sqlite3.Database('user.db');
-db.serialize(() => {
-  db.run(
-    'CREATE TABLE IF NOT EXISTS Transactions (id INTEGER PRIMARY KEY, date TEXT NOT NULL, description TEXT, amount INTEGER NOT NULL, category TEXT)'
-  );
-  db.run('PRAGMA journal_mode = DELETE');
-});
 
 // Object.defineProperty(app, 'isPackaged', {
 //   get() {
@@ -170,7 +160,6 @@ const createWindow = async () => {
     return { action: 'deny' };
   });
 
-  // Remove this if your app does not use auto updates
   // eslint-disable-next-line
   new AppUpdater();
 };

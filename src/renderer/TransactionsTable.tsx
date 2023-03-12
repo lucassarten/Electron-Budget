@@ -21,8 +21,6 @@ import {
 } from '@mui/material';
 import { Delete, Edit } from '@mui/icons-material';
 
-const categoires = ['Food', 'Rent', 'Utilities', 'Transportation', 'Other'];
-
 export type Transaction = {
   id: string;
   date: string;
@@ -31,6 +29,14 @@ export type Transaction = {
   category: string;
 };
 
+const formatCurrency = (value: number) => {
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'NZD',
+    currencyDisplay: 'symbol',
+  });
+  return formatter.format(value);
+};
 const validateRequired = (value: string) => !!value.length;
 const validateDate = (value: string) => {
   const date = new Date(value);
@@ -44,6 +50,7 @@ const validateAmount = (value: string) => {
 interface CreateModalProps {
   columns: MRT_ColumnDef<Transaction>[];
   onClose: () => void;
+  // eslint-disable-next-line no-unused-vars
   onSubmit: (values: Transaction) => void;
   open: boolean;
 }
@@ -60,6 +67,19 @@ export function AddTransactionModal({
       return acc;
     }, {} as any)
   );
+  const [categoires, setCategoires] = useState<string[]>([]);
+
+  useEffect(() => {
+    // get categories from db
+    window.electron.ipcRenderer.sendMessage('db-query', [
+      'SELECT * FROM Categories',
+    ]);
+    // wait for response
+    window.electron.ipcRenderer.once('db-query', (resp) => {
+      // cast response to array of categories
+      setCategoires(resp as string[]);
+    });
+  }, []);
 
   const handleSubmit = () => {
     // put your validation logic here
@@ -126,6 +146,7 @@ function TransactionsTable({ filter }: any) {
   const [validationErrors, setValidationErrors] = useState<{
     [cellId: string]: string;
   }>({});
+  const [categoires, setCategoires] = useState<string[]>([]);
 
   useEffect(() => {
     let data: Transaction[] = [];
@@ -137,6 +158,15 @@ function TransactionsTable({ filter }: any) {
       // cast response to array of transactions
       data = resp as Transaction[];
       setTableData(data);
+    });
+    // get categories from db
+    window.electron.ipcRenderer.sendMessage('db-query', [
+      'SELECT * FROM Categories',
+    ]);
+    // wait for response
+    window.electron.ipcRenderer.once('db-query', (resp) => {
+      // cast response to array of categories
+      setCategoires(resp as string[]);
     });
   }, [filter]);
 
@@ -194,7 +224,7 @@ function TransactionsTable({ filter }: any) {
             // set validation error for cell if invalid
             setValidationErrors({
               ...validationErrors,
-              [cell.id]: `${cell.column.columnDef.header} is required`,
+              [cell.id]: `${cell.column.columnDef.header} is invalid`,
             });
           } else {
             // remove validation error for cell if valid
@@ -255,6 +285,8 @@ function TransactionsTable({ filter }: any) {
         muiTableBodyCellEditTextFieldProps: ({ cell }) => ({
           ...getCommonEditTextFieldProps(cell),
         }),
+        // format as currency
+        Cell: ({ cell }) => formatCurrency(cell.getValue() as number),
       },
       {
         accessorKey: 'category',
@@ -270,7 +302,7 @@ function TransactionsTable({ filter }: any) {
         },
       },
     ],
-    [getCommonEditTextFieldProps]
+    [categoires, getCommonEditTextFieldProps]
   );
 
   return (
@@ -284,6 +316,8 @@ function TransactionsTable({ filter }: any) {
             size: 120,
           },
         }}
+        enableStickyHeader
+        enablePagination={false}
         columns={columns}
         data={tableData}
         editingMode="modal" // default
