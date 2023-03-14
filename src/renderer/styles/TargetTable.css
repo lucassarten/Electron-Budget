@@ -1,0 +1,26 @@
+/* display contents side by side */
+.target-tables-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  overflow-y: hidden;
+  gap: 50px;
+  width: 100%;
+  height: calc(100vh - 50px);
+}
+
+.expense-targets-table {
+  width: 40%;
+  height: 90%;
+}
+
+.income-targets-table {
+  width: 40%;
+  height: 90%;
+}
+
+h2 {
+  color: black;
+  text-align: center;
+}

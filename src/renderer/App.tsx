@@ -4,6 +4,7 @@ import { useState } from 'react';
 import './styles/App.css';
 import TransactionsTable from './TransactionsTable';
 import Dashboard from './Dashboard';
+import TargetTables from './TargetTable';
 
 type Tab = 'dashboard' | 'income' | 'expenses' | 'budgetTargets';
 
@@ -20,7 +21,7 @@ function ExpensesView() {
 }
 
 function BudgetTargetsView() {
-  return <h1>Budget Targets view</h1>;
+  return <TargetTables />;
 }
 
 function MainLayout() {

@@ -8,10 +8,6 @@
   gap: 5px;
 }
 
-.MuiTableContainer-root {
-  height: clamp(350px, calc(100vh - 100px), 9999px);
-}
-
 .button-add-transaction {
   width: 100px;
 }
