@@ -1,0 +1,47 @@
+.transactions-table {
+  width: 100%;
+  height: calc(100% - 50px);
+}
+
+.table-top-toolbar-container {
+  display: flex;
+  gap: 5px;
+}
+
+.MuiTableContainer-root {
+  height: clamp(350px, calc(100vh - 100px), 9999px);
+}
+
+.button-add-transaction {
+  width: 100px;
+}
+
+.button-delete-transaction {
+  width: 100px;
+}
+
+.button-delete-transaction:disabled:hover {
+  transform: none;
+  cursor: default;
+}
+
+.add-transaction-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.button-add-transaction {
+  color: var(--button-text-color);
+  background-color: var(--button-add-transaction);
+}
+
+.button-delete-transaction:disabled {
+  color: var(--button-text-color);
+  background-color: var(--button-delete-transaction-disabled);
+}
+
+.button-delete-transaction {
+  color: var(--button-text-color);
+  background-color: var(--button-delete-transaction);
+}

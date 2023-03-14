@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import MaterialReactTable, {
   MRT_Cell,
   MRT_ColumnDef,
+  MRT_RowSelectionState,
 } from 'material-react-table';
 import {
   Button,
@@ -15,6 +16,8 @@ import {
   Stack,
   TextField,
 } from '@mui/material';
+
+import { buttonStyleAdd, buttonStyleCancel } from './styles/MUI';
 
 export type Transaction = {
   id: string;
@@ -38,6 +41,14 @@ const formatCurrency = (value: number) => {
   });
   return formatter.format(value);
 };
+const formatDate = (value: string) => {
+  const date = new Date(value);
+  return date.toLocaleDateString('en-NZ', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+};
 const validateRequired = (value: string) => !!value.length;
 const validateDate = (value: string) => {
   const date = new Date(value);
@@ -50,6 +61,14 @@ const validateAmount = (value: string) => {
 const validateCategory = (value: string, categories: Category[]) => {
   const category = categories.find((c) => c.name === value);
   return !!category;
+};
+const validateModal = (values: any, type: string) => {
+  return (
+    validateAmount(values.amount) &&
+    validateRequired(values.amount) &&
+    ((type === 'income' && Number(values.amount) > 0) ||
+      (type === 'expense' && Number(values.amount) < 0))
+  );
 };
 
 interface CreateModalProps {
@@ -83,11 +102,18 @@ export function AddTransactionModal({
     onClose();
   };
 
+  categories
+    .filter((category) => category.type === type)
+    .map((category) => console.log(category.name));
+
   return (
     <Dialog open={open}>
-      <DialogTitle textAlign="center">Add Transaction</DialogTitle>
+      <DialogTitle textAlign="center">Add {type}</DialogTitle>
       <DialogContent>
-        <form onSubmit={(e) => e.preventDefault()}>
+        <form
+          onSubmit={(e) => e.preventDefault()}
+          className="add-transaction-form"
+        >
           <Stack
             sx={{
               width: '100%',
@@ -95,7 +121,27 @@ export function AddTransactionModal({
               gap: '1.5rem',
             }}
           >
-            {columns.slice(1, 4).map((column) => (
+            {
+              // date picker
+              columns.slice(1, 2).map((column) => (
+                // date picker
+                <TextField
+                  key={column.accessorKey}
+                  label={column.header}
+                  name={column.accessorKey}
+                  onChange={(e) =>
+                    setValues({ ...values, [e.target.name]: e.target.value })
+                  }
+                  type="date"
+                  required
+                  error={!validateDate(values.date)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                />
+              ))
+            }
+            {columns.slice(2, 3).map((column) => (
               <TextField
                 key={column.accessorKey}
                 label={column.header}
@@ -103,8 +149,30 @@ export function AddTransactionModal({
                 onChange={(e) =>
                   setValues({ ...values, [e.target.name]: e.target.value })
                 }
+                required
+                error={!validateRequired(values.description)}
               />
-              // catergory dropdown
+            ))}
+            {columns.slice(3, 4).map((column) => (
+              <TextField
+                key={column.accessorKey}
+                label={column.header}
+                name={column.accessorKey}
+                onChange={(e) =>
+                  setValues({ ...values, [e.target.name]: e.target.value })
+                }
+                required
+                error={!validateModal(values, type)}
+                helperText={
+                  !validateAmount(values.amount)
+                    ? `${column.accessorKey} must be a number`
+                    : type === 'income' && Number(values.amount) < 0
+                    ? `income must be positive`
+                    : type === 'expense' && Number(values.amount) > 0
+                    ? `expense must be negative`
+                    : ''
+                }
+              />
             ))}
             {columns.slice(4).map((column) => (
               <TextField
@@ -115,6 +183,7 @@ export function AddTransactionModal({
                   setValues({ ...values, [e.target.name]: e.target.value })
                 }
                 select
+                defaultValue="❓ Other"
               >
                 {categories
                   .filter((category) => category.type === type)
@@ -129,8 +198,23 @@ export function AddTransactionModal({
         </form>
       </DialogContent>
       <DialogActions sx={{ p: '1.25rem' }}>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button color="secondary" onClick={handleSubmit} variant="contained">
+        <Button onClick={onClose} style={buttonStyleCancel}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          style={
+            !validateModal(values, type) ||
+            !validateRequired(values.description)
+              ? buttonStyleAdd.disabled
+              : buttonStyleAdd
+          }
+          // inactive if there are validation errors
+          disabled={
+            !validateModal(values, type) ||
+            !validateRequired(values.description)
+          }
+        >
           Add
         </Button>
       </DialogActions>
@@ -145,6 +229,7 @@ function TransactionsTable({ type }: any) {
     [cellId: string]: string;
   }>({});
   const [categories, setCategories] = useState<Category[]>([]);
+  const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
 
   useEffect(() => {
     window.electron.ipcRenderer.once('db-query-transactions', (resp) => {
@@ -157,25 +242,27 @@ function TransactionsTable({ type }: any) {
     });
     // get categories from db
     window.electron.ipcRenderer.sendMessage('db-query', [
+      'db-query-categories',
       `SELECT * FROM Categories WHERE ${
         type === 'income' ? 'type = "income"' : 'type = "expense"'
       }`,
-      'categories',
     ]);
     // get positive transactions from db
     window.electron.ipcRenderer.sendMessage('db-query', [
+      'db-query-transactions',
       `SELECT * FROM Transactions WHERE ${
         type === 'income' ? 'amount > 0' : 'amount < 0'
       }`,
-      'transactions',
     ]);
   }, [type]);
 
   const handleCreateNewRow = (values: Transaction) => {
     tableData.push(values);
     // insert row into db
-    const query = `INSERT INTO Transactions (date, description, amount, category) VALUES ('${values.date}', '${values.description}', ${values.amount}, '${values.category}')`;
-    window.electron.ipcRenderer.sendMessage('db-query', [query]);
+    window.electron.ipcRenderer.sendMessage('db-query', [
+      '',
+      `INSERT INTO Transactions (date, description, amount, category) VALUES ('${values.date}', '${values.description}', ${values.amount}, '${values.category}')`,
+    ]);
     setTableData([...tableData]);
   };
 
@@ -199,18 +286,34 @@ function TransactionsTable({ type }: any) {
           break;
       }
       // update row in db
-      const query = `UPDATE Transactions SET date = '${
-        tableData[cell.row.index].date
-      }', description = '${tableData[cell.row.index].description}', amount = ${
-        tableData[cell.row.index].amount
-      }, category = '${tableData[cell.row.index].category}' WHERE id = ${
-        tableData[cell.row.index].id
-      }`;
-      window.electron.ipcRenderer.sendMessage('db-query', [query]);
+      window.electron.ipcRenderer.sendMessage('db-query', [
+        '',
+        `UPDATE Transactions SET date = '${
+          tableData[cell.row.index].date
+        }', description = '${
+          tableData[cell.row.index].description
+        }', amount = ${tableData[cell.row.index].amount}, category = '${
+          tableData[cell.row.index].category
+        }' WHERE id = ${tableData[cell.row.index].id}`,
+      ]);
       setTableData([...tableData]);
     },
     [tableData]
   );
+
+  const handleDeleteRows = useCallback(() => {
+    // loop through selected rows and delete them from tableData
+    const newTableData = tableData.filter((row) => !rowSelection[row.id]);
+    console.log(rowSelection);
+    // delete rows from db
+    const query = `DELETE FROM Transactions WHERE id IN (${
+      Object.keys(rowSelection) as string[]
+    })`;
+    console.log(query);
+    window.electron.ipcRenderer.sendMessage('db-query', ['', query]);
+    setTableData(newTableData);
+    setRowSelection({});
+  }, [rowSelection, tableData]);
 
   const getCommonEditTextFieldProps = useCallback(
     (
@@ -293,9 +396,14 @@ function TransactionsTable({ type }: any) {
         accessorKey: 'date',
         header: 'Date',
         size: 100,
+        // date picker
         muiTableBodyCellEditTextFieldProps: ({ cell }) => ({
           ...getCommonEditTextFieldProps(cell),
+          type: 'date',
+          format: 'dd/MM/yyyy',
         }),
+        // display as dd/MM/yyyy
+        Cell: ({ cell }) => formatDate(cell.getValue() as string),
       },
       {
         accessorKey: 'description',
@@ -345,15 +453,36 @@ function TransactionsTable({ type }: any) {
         enableColumnOrdering
         editingMode="cell"
         enableEditing
+        enableRowSelection
+        onRowSelectionChange={setRowSelection}
+        state={{ rowSelection }}
+        // hide bottom toolbar
+        muiBottomToolbarProps={
+          {
+            style: {
+              display: 'none',
+            },
+          } as any
+        }
+        getRowId={(row) => row.id}
         renderTopToolbarCustomActions={() => (
-          <button
-            className="button-add-transaction"
-            type="button"
-            color="secondary"
-            onClick={() => setCreateModalOpen(true)}
-          >
-            Add Transaction
-          </button>
+          <span className="table-top-toolbar-container">
+            <button
+              className="button-add-transaction"
+              type="button"
+              onClick={() => setCreateModalOpen(true)}
+            >
+              Add
+            </button>
+            <button
+              className="button-delete-transaction"
+              type="button"
+              disabled={Object.keys(rowSelection).length === 0}
+              onClick={() => handleDeleteRows()}
+            >
+              Delete
+            </button>
+          </span>
         )}
       />
       <AddTransactionModal

@@ -68,8 +68,8 @@ ipcMain.on('ipc-example', async (event, arg) => {
 ipcMain.on('db-query', async (event, args) => {
   // record time taken for query
   const start = Date.now();
-  const sqlQuery = args[0];
-  const id = args[1];
+  const respChannel = args[0];
+  const sqlQuery = args[1];
   // query the db
   const result = await new Promise((resolve, reject) => {
     db.all(sqlQuery.toString(), [], (err: any, rows: unknown) => {
@@ -85,7 +85,7 @@ ipcMain.on('db-query', async (event, args) => {
   // log time taken
   console.log(`Query took ${Date.now() - start}ms`);
   // send the result back to the renderer
-  event.reply(`db-query-${id}`, result);
+  event.reply(respChannel, result);
 });
 
 if (process.env.NODE_ENV === 'production') {

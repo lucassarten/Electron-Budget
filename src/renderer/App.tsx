@@ -1,10 +1,7 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { useState } from 'react';
 
-import './App.css';
-import './TransactionsTable.css';
-import './TabBar.css';
-import './Dashboard.css';
+import './styles/App.css';
 import TransactionsTable from './TransactionsTable';
 import Dashboard from './Dashboard';
 
@@ -34,8 +31,8 @@ function MainLayout() {
   };
 
   return (
-    <div className="App">
-      <div className="tabs">
+    <div>
+      <div className="tabs-container">
         <button
           type="button"
           id="tab"
