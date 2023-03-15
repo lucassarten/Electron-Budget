@@ -60,6 +60,13 @@ h1 {
   text-align: center;
 }
 
+h2 {
+  color: black;
+  margin: auto;
+  padding: auto ;
+  text-align: center;
+}
+
 li {
   list-style: none;
 }

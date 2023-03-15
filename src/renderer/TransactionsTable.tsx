@@ -50,14 +50,6 @@ const validateCategory = (value: string, categories: Category[]) => {
   const category = categories.find((c) => c.name === value);
   return !!category;
 };
-const validateModal = (values: any, type: string) => {
-  return (
-    validateAmount(values.amount) &&
-    validateRequired(values.amount) &&
-    ((type === 'income' && Number(values.amount) > 0) ||
-      (type === 'expense' && Number(values.amount) < 0))
-  );
-};
 
 interface CreateModalProps {
   columns: MRT_ColumnDef<Transaction>[];
@@ -90,9 +82,7 @@ export function AddTransactionModal({
     onClose();
   };
 
-  categories
-    .filter((category) => category.type === type)
-    .map((category) => console.log(category.name));
+  console.log(categories);
 
   return (
     <Dialog open={open}>
@@ -150,14 +140,13 @@ export function AddTransactionModal({
                   setValues({ ...values, [e.target.name]: e.target.value })
                 }
                 required
-                error={!validateModal(values, type)}
+                error={
+                  !validateAmount(values.amount) ||
+                  !validateRequired(values.amount)
+                }
                 helperText={
                   !validateAmount(values.amount)
                     ? `${column.accessorKey} must be a number`
-                    : type === 'income' && Number(values.amount) < 0
-                    ? `income must be positive`
-                    : type === 'expense' && Number(values.amount) > 0
-                    ? `expense must be negative`
                     : ''
                 }
               />
@@ -173,13 +162,11 @@ export function AddTransactionModal({
                 select
                 defaultValue="❓ Other"
               >
-                {categories
-                  .filter((category) => category.type === type)
-                  .map((category) => (
-                    <MenuItem key={category.id} value={category.name}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
+                {categories.map((category) => (
+                  <MenuItem key={category.name} value={category.name}>
+                    {category.name}
+                  </MenuItem>
+                ))}
               </TextField>
             ))}
           </Stack>
@@ -192,14 +179,16 @@ export function AddTransactionModal({
         <Button
           onClick={handleSubmit}
           style={
-            !validateModal(values, type) ||
+            !validateAmount(values.amount) ||
+            !validateRequired(values.amount) ||
             !validateRequired(values.description)
               ? buttonStyleAdd.disabled
               : buttonStyleAdd
           }
           // inactive if there are validation errors
           disabled={
-            !validateModal(values, type) ||
+            !validateAmount(values.amount) ||
+            !validateRequired(values.amount) ||
             !validateRequired(values.description)
           }
         >
@@ -231,18 +220,24 @@ function TransactionsTable({ type }: any) {
     // get categories from db
     window.electron.ipcRenderer.sendMessage('db-query', [
       'db-query-categories',
-      `SELECT * FROM Categories WHERE type = "${type}"`,
+      `SELECT * FROM Categories${type}`,
     ]);
     // get positive transactions from db
     window.electron.ipcRenderer.sendMessage('db-query', [
       'db-query-transactions',
       `SELECT * FROM Transactions WHERE ${
-        type === 'income' ? 'amount > 0' : 'amount < 0'
+        type === 'Income' ? 'amount > 0' : 'amount < 0'
       }`,
     ]);
   }, [type]);
 
   const handleCreateNewRow = (values: Transaction) => {
+    // if type is expense, make amount negative
+    if (type === 'Expense') {
+      values.amount = -values.amount;
+    } else {
+      values.amount = Math.abs(values.amount);
+    }
     tableData.push(values);
     // insert row into db
     window.electron.ipcRenderer.sendMessage('db-query', [
@@ -415,18 +410,16 @@ function TransactionsTable({ type }: any) {
         size: 50,
         muiTableBodyCellEditTextFieldProps: ({ cell }) => ({
           select: true,
-          children: categories
-            .filter((category) => category.type === type)
-            .map((category) => (
-              <MenuItem key={category.id} value={category.name}>
-                {category.name}
-              </MenuItem>
-            )),
+          children: categories.map((category) => (
+            <MenuItem key={category.name} value={category.name}>
+              {category.name}
+            </MenuItem>
+          )),
           ...getCommonEditTextFieldProps(cell),
         }),
       },
     ],
-    [categories, getCommonEditTextFieldProps, type]
+    [categories, getCommonEditTextFieldProps]
   );
 
   return (
@@ -439,6 +432,8 @@ function TransactionsTable({ type }: any) {
             },
           } as any
         }
+        enableBottomToolbar={false}
+        enableStickyFooter={false}
         enableStickyHeader
         enablePagination={false}
         columns={columns}

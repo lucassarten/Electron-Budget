@@ -22,4 +22,8 @@
   --button-add-transaction-form: #75A52E;
   --button-cancel-transaction-form: #A63D26;
   --button-cancel-transaction-form-disabled: #c0c0c0;
+  /* buttons in the add category form */
+  --button-add-category: #75A52E;
+  --button-delete-category: #A63D26;
+  --button-delete-category-disabled: #c0c0c0;
 }
