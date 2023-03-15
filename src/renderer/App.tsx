@@ -4,7 +4,8 @@ import { useState } from 'react';
 import './styles/App.css';
 import TransactionsTable from './TransactionsTable';
 import Dashboard from './Dashboard';
-import TargetTables from './TargetTable';
+import CategoryExpenseTable from './CategoryExpenseTable';
+import CategoryIncomeTable from './CategoryIncomeTable';
 
 type Tab = 'dashboard' | 'income' | 'expenses' | 'budgetTargets';
 
@@ -13,15 +14,24 @@ function DashboardView() {
 }
 
 function IncomeView() {
-  return <TransactionsTable type="income" />;
+  return <TransactionsTable type="Income" />;
 }
 
 function ExpensesView() {
-  return <TransactionsTable type="expense" />;
+  return <TransactionsTable type="Expense" />;
 }
 
 function BudgetTargetsView() {
-  return <TargetTables />;
+  return (
+    <div className="target-tables-container">
+      <div className="expense-targets-table">
+        <CategoryExpenseTable />
+      </div>
+      <div className="income-targets-table">
+        <CategoryIncomeTable />
+      </div>
+    </div>
+  );
 }
 
 function MainLayout() {

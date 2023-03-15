@@ -1,5 +1,18 @@
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas:
+    "income expenses"
+    "budgetTargets budgetTargets";
+  grid-gap: 1rem;
+  padding: 1rem;
+}
+
 .pie-chart {
-  width: 70vh;
-  height: 70vh;
-  margin: auto;
+  width: 100%;
+  height: 0%;
+}
+
+canvas {
 }

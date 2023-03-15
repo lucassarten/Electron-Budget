@@ -83,6 +83,8 @@ ipcMain.on('db-query', async (event, args) => {
     console.log(err);
   });
   // log time taken
+  console.log(sqlQuery);
+  console.log(result);
   console.log(`Query took ${Date.now() - start}ms`);
   // send the result back to the renderer
   event.reply(respChannel, result);
