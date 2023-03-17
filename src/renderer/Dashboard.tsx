@@ -2,15 +2,178 @@
 import { Chart, registerables } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Bar, Pie } from 'react-chartjs-2';
+import React = require('react');
 import { useEffect, useState } from 'react';
+import {
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  SelectChangeEvent,
+  MenuItem,
+} from '@mui/material';
 import { Category, Transaction } from './types';
+
+interface TimePeriod {
+  startDate: Date;
+  endDate: Date;
+}
+
+interface TimePeriodSelectorProps {
+  // eslint-disable-next-line no-unused-vars
+  onTimePeriodChange: (timePeriod: TimePeriod) => void;
+}
+
+const validateDate = (value: Date) => {
+  try {
+    value.toISOString();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+function TimePeriodSelector({ onTimePeriodChange }: TimePeriodSelectorProps) {
+  const [selectedOption, setSelectedOption] = useState('all');
+  const [startDate, setStartDate] = useState<Date>(new Date(0));
+  const [endDate, setEndDate] = useState<Date>(new Date());
+
+  const handleOptionChange = (event: SelectChangeEvent<string>) => {
+    setSelectedOption(event.target.value);
+    // print start end dates
+    let startDateCalc = new Date(0);
+    const endDateCalc = new Date();
+    switch (event.target.value) {
+      case 'lastWeek':
+        startDateCalc = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        onTimePeriodChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+      case 'lastMonth':
+        startDateCalc = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        onTimePeriodChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        setStartDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+        break;
+      case 'lastThreeMonths':
+        startDateCalc = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+        onTimePeriodChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+      case 'lastSixMonths':
+        startDateCalc = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+        onTimePeriodChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+      case 'lastYear':
+        startDateCalc = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+        onTimePeriodChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+      case 'custom':
+        // do nothing, wait for user to select custom dates
+        break;
+      default:
+        onTimePeriodChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+    }
+    setStartDate(startDateCalc);
+    setEndDate(endDateCalc);
+  };
+
+  const handleCustomDatesChange = () => {
+    onTimePeriodChange({
+      startDate,
+      endDate,
+    });
+  };
+
+  const handleStartDateChange = (date: Date) => {
+    setStartDate(date);
+  };
+
+  const handleEndDateChange = (date: Date) => {
+    setEndDate(date);
+  };
+
+  return (
+    <>
+      <FormControl>
+        <InputLabel id="timePeriodSelectLabel">Time Period</InputLabel>
+        <Select
+          labelId="timePeriodSelectLabel"
+          className="time-period-selector"
+          id="timePeriodSelect"
+          value={selectedOption}
+          label="Time Period"
+          onChange={handleOptionChange}
+        >
+          <MenuItem value="lastWeek">Last Week</MenuItem>
+          <MenuItem value="lastMonth">Last Month</MenuItem>
+          <MenuItem value="lastThreeMonths">Last 3 Months</MenuItem>
+          <MenuItem value="lastSixMonths">Last 6 Months</MenuItem>
+          <MenuItem value="lastYear">Last Year</MenuItem>
+          <MenuItem value="all">All</MenuItem>
+          <MenuItem value="custom">Custom</MenuItem>
+        </Select>
+      </FormControl>
+      <div className="time-period-custom-container">
+        <TextField
+          label="Start Date"
+          id="startDatePicker"
+          onChange={(e) => {
+            handleStartDateChange(new Date(e.target.value));
+            handleCustomDatesChange();
+          }}
+          type="date"
+          InputLabelProps={{
+            shrink: true,
+          }}
+          disabled={selectedOption !== 'custom'}
+          value={
+            validateDate(startDate) ? startDate.toISOString().split('T')[0] : ''
+          }
+        />
+        <TextField
+          label="End Date"
+          id="endDatePicker"
+          onChange={(e) => {
+            handleEndDateChange(new Date(e.target.value));
+            handleCustomDatesChange();
+          }}
+          type="date"
+          InputLabelProps={{
+            shrink: true,
+          }}
+          disabled={selectedOption !== 'custom'}
+          value={
+            validateDate(endDate) ? endDate.toISOString().split('T')[0] : ''
+          }
+        />
+      </div>
+    </>
+  );
+}
 
 Chart.register(...registerables, ChartDataLabels);
 
 function categoryPieChart(
+  type: string,
   categories: Category[],
-  transactions: Transaction[],
-  type: string
+  transactions: Transaction[]
 ) {
   return (
     <Pie
@@ -63,7 +226,7 @@ function categoryPieChart(
           },
           title: {
             display: true,
-            text: `${type} by Category`,
+            text: `${type ? 'Income' : 'Expenses'} by Category`,
             color: 'black',
             position: 'top',
           },
@@ -92,10 +255,6 @@ function IncomeEarningSavingsComparison(transactions: Transaction[]) {
     .filter((transaction) => transaction.amount < 0)
     .reduce((acc, transaction) => acc + Math.abs(transaction.amount), 0);
   return (
-    // bar graph comparing income, expenses, and savings, the chart will have one bar for each income, expenses, and savings
-    // the income bar will be green, the expenses bar will be red, and the savings bar will be blue
-    // the income bar will come from the bottom of the chart, the expenses bar will come from the top of the chart, and the savings bar will come from the middle of the chart
-    // the income bar will be the sum of all income transactions, the expenses bar will be the sum of all expense transactions, and the savings bar will be the difference between the income and expenses
     <Bar
       data={{
         labels: [''],
@@ -160,11 +319,25 @@ function Dashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categoriesIncome, setCategoriesIncome] = useState<Category[]>([]);
   const [categoriesExpense, setCategoriesExpense] = useState<Category[]>([]);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>({
+    startDate: new Date(0),
+    endDate: new Date(),
+  });
 
   useEffect(() => {
+    // get transactions from db between time period
     window.electron.ipcRenderer.once('db-query-transactions', (resp) => {
       const response = resp as Transaction[];
-      setTransactions(response);
+      // filter out transactions that are not in the time period
+      const filteredTransactions = response.filter((transaction) => {
+        const transactionDate = new Date(transaction.date);
+        return (
+          transactionDate >= timePeriod.startDate &&
+          transactionDate <= timePeriod.endDate
+        );
+      });
+      console.log(filteredTransactions.length);
+      setTransactions(filteredTransactions);
     });
     window.electron.ipcRenderer.once('db-query-categories-expense', (resp) => {
       const response = resp as Category[];
@@ -183,12 +356,12 @@ function Dashboard() {
       'db-query-categories-income',
       `SELECT * FROM CategoriesIncome`,
     ]);
-    // get positive transactions from db
+    // get transactions from db between time period
     window.electron.ipcRenderer.sendMessage('db-query', [
       'db-query-transactions',
       `SELECT * FROM Transactions`,
     ]);
-  }, []);
+  }, [timePeriod]);
 
   const transactionsExpense = transactions.filter(
     (transaction) => transaction.amount < 0
@@ -197,16 +370,20 @@ function Dashboard() {
     (transaction) => transaction.amount > 0
   );
   return (
-    // pie chart graphing expense by category
-    <div className="dashboard-grid">
-      <div className="pie-chart">
-        {categoryPieChart(categoriesExpense, transactionsExpense, 'Expenses')}
+    <div className="dashboard-container">
+      <div className="time-period-selector-container">
+        <TimePeriodSelector onTimePeriodChange={setTimePeriod} />
       </div>
-      <div className="pie-chart">
-        {categoryPieChart(categoriesIncome, transactionsIncome, 'Income')}
-      </div>
-      <div className="bar-chart">
-        {IncomeEarningSavingsComparison(transactions)}
+      <div className="dashboard-grid">
+        <div className="pie-chart-container">
+          {categoryPieChart('Expense', categoriesExpense, transactionsExpense)}
+        </div>
+        <div className="pie-chart-container">
+          {categoryPieChart('Income', categoriesIncome, transactionsIncome)}
+        </div>
+        <div className="bar-chart-container">
+          {IncomeEarningSavingsComparison(transactions)}
+        </div>
       </div>
     </div>
   );
