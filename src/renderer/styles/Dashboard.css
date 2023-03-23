@@ -33,3 +33,11 @@
 .time-period-selector {
   width: 150px;
 }
+
+.category-selector {
+  width: 200px;
+}
+
+.interval-selector {
+  width: 100px;
+}

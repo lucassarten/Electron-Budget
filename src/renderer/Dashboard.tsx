@@ -1,6 +1,7 @@
 /* eslint-disable react/destructuring-assignment */
 import { Chart, registerables } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import { Bar, Pie } from 'react-chartjs-2';
 import React = require('react');
 import { useEffect, useState } from 'react';
@@ -19,9 +20,30 @@ interface TimePeriod {
   endDate: Date;
 }
 
+const formatCurrency = (value: number) => {
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'NZD',
+    currencyDisplay: 'symbol',
+  });
+  return formatter.format(value);
+};
+
 interface TimePeriodSelectorProps {
   // eslint-disable-next-line no-unused-vars
   onTimePeriodChange: (timePeriod: TimePeriod) => void;
+}
+
+interface IntervalSelectorProps {
+  // eslint-disable-next-line no-unused-vars
+  onIntervalChange: (timePeriod: TimePeriod) => void;
+  // eslint-disable-next-line no-unused-vars
+}
+
+interface CategorySelectorProps {
+  // eslint-disable-next-line no-unused-vars
+  onCategoryChange: (category: Category) => void;
+  categories: Category[];
 }
 
 const validateDate = (value: Date) => {
@@ -168,7 +190,7 @@ function TimePeriodSelector({ onTimePeriodChange }: TimePeriodSelectorProps) {
   );
 }
 
-Chart.register(...registerables, ChartDataLabels);
+Chart.register(...registerables, ChartDataLabels, annotationPlugin);
 
 function categoryPieChart(
   type: string,
@@ -315,19 +337,255 @@ function IncomeEarningSavingsComparison(transactions: Transaction[]) {
   );
 }
 
+/**
+ * Creates a bar chart graphing the budget vs actual spending for a given category, for the last 10 periods of the currently selected time period
+ * @param type
+ * @param categories
+ * @param transactions
+ * @returns
+ */
+function budgetComparisonBarChart(
+  timePeriod: TimePeriod,
+  category: Category,
+  transactions: Transaction[]
+) {
+  // split all transactions into periods of time timePeriod long (e.g. 10 periods of 1 month each)
+  const timePeriodLength =
+    timePeriod.endDate.getTime() - timePeriod.startDate.getTime();
+  const periods: Transaction[][] = [];
+  for (let i = 0; i < 10; i += 1) {
+    const periodStart = new Date(
+      timePeriod.endDate.getTime() - timePeriodLength * (i + 1)
+    );
+    const periodEnd = new Date(
+      timePeriod.endDate.getTime() - timePeriodLength * i
+    );
+    const periodTransactions = transactions.filter(
+      (transaction) =>
+        new Date(transaction.date) >= periodStart &&
+        new Date(transaction.date) < periodEnd
+    );
+    periods.push(periodTransactions);
+  }
+  // generate labels for the x axis
+  const labels = periods.map((period) => {
+    const periodStart = new Date(
+      timePeriod.endDate.getTime() -
+        timePeriodLength * (periods.indexOf(period) + 1)
+    );
+    const periodEnd = new Date(
+      timePeriod.endDate.getTime() - timePeriodLength * periods.indexOf(period)
+    );
+    return `${
+      periodStart.getMonth() + 1
+    }/${periodStart.getDate()}/${periodStart.getFullYear()} - ${
+      periodEnd.getMonth() + 1
+    }/${periodEnd.getDate()}/${periodEnd.getFullYear()}`;
+  });
+  let budget = 0;
+  if (category) {
+    // calulate budget over implied time period. Budgets are for the month, so if the time period is a year, the budget is the monthly budget * 12
+    budget = category.target * (timePeriodLength / 1000 / 60 / 60 / 24 / 30);
+  }
+  const actuals = periods.map((period) => {
+    const periodTransactions = period.filter(
+      (transaction) => transaction.category === category.name
+    );
+    return periodTransactions.reduce(
+      (acc, transaction) => acc + Math.abs(transaction.amount),
+      0
+    );
+  });
+  return (
+    <Bar
+      data={{
+        labels: labels.reverse(),
+        datasets: [
+          {
+            label: 'Actual',
+            data: actuals.reverse(),
+            backgroundColor: 'red',
+            barPercentage: 0.9,
+          },
+        ],
+        // draw a line for the budget
+      }}
+      options={{
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'left',
+          },
+          title: {
+            display: true,
+            text: `Implied Budget of ${formatCurrency(budget)} vs Actual`,
+            color: 'black',
+            position: 'top',
+          },
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            formatter: (value) => `$${Math.round(value)}`,
+            font: {
+              weight: 'bold',
+            },
+          },
+          annotation: {
+            annotations: {
+              line1: {
+                type: 'line',
+                scaleID: 'y',
+                value: budget,
+                borderColor: 'blue',
+                borderWidth: 2,
+                label: {
+                  backgroundColor: 'blue',
+                  content: 'Budget',
+                },
+              },
+            },
+          },
+        },
+        // make no gaps between bars
+        indexAxis: 'x',
+
+        scales: {
+          x: {
+            display: true,
+            offset: true,
+          },
+        },
+      }}
+    />
+  );
+}
+
+function CategorySelector({
+  onCategoryChange,
+  categories,
+}: CategorySelectorProps) {
+  const [selectedOption, setSelectedOption] = useState(categories[0]);
+  const handleOptionChange = (event: SelectChangeEvent<Category>) => {
+    setSelectedOption(event.target.value as Category);
+    onCategoryChange(event.target.value as Category);
+  };
+
+  useEffect(() => {
+    setSelectedOption(categories[0]);
+  }, [categories]);
+
+  return (
+    <FormControl>
+      <InputLabel id="category-selector-label">Category</InputLabel>
+      <Select
+        displayEmpty
+        labelId="category-selector-label"
+        className="category-selector"
+        id="CategorySelector"
+        label="Category"
+        // @ts-ignore
+        value={selectedOption}
+        onChange={handleOptionChange}
+      >
+        {categories.map((category) => (
+          // @ts-ignore
+          <MenuItem key={category.name} value={category}>
+            {category.name}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+}
+
+function IntervalSelector({ onIntervalChange }: IntervalSelectorProps) {
+  const [selectedOption, setSelectedOption] = useState('week');
+
+  const handleOptionChange = (event: SelectChangeEvent<string>) => {
+    setSelectedOption(event.target.value);
+    // print start end dates
+    let startDateCalc = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const endDateCalc = new Date();
+    switch (event.target.value) {
+      case 'day':
+        startDateCalc = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        onIntervalChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+      case 'week':
+        startDateCalc = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        onIntervalChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+      case 'month':
+        startDateCalc = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        onIntervalChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+      case 'year':
+        startDateCalc = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+        onIntervalChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+      default:
+        onIntervalChange({
+          startDate: startDateCalc,
+          endDate: endDateCalc,
+        });
+        break;
+    }
+  };
+
+  return (
+    <FormControl>
+      <InputLabel id="intervalSelectLabel">Interval</InputLabel>
+      <Select
+        labelId="intervalSelectLabel"
+        className="interval-selector"
+        id="intervalSelect"
+        label="Interval"
+        value={selectedOption}
+        onChange={handleOptionChange}
+      >
+        <MenuItem value="day">Day</MenuItem>
+        <MenuItem value="week">Week</MenuItem>
+        <MenuItem value="month">Month</MenuItem>
+        <MenuItem value="year">Year</MenuItem>
+      </Select>
+    </FormControl>
+  );
+}
+
 function Dashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactionsAll, setTransactionsAll] = useState<Transaction[]>([]);
   const [categoriesIncome, setCategoriesIncome] = useState<Category[]>([]);
   const [categoriesExpense, setCategoriesExpense] = useState<Category[]>([]);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>({
     startDate: new Date(0),
     endDate: new Date(),
   });
+  const [interval, setInterval] = useState<TimePeriod>({
+    // default 1 week
+    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    endDate: new Date(),
+  });
+  const [selectedCategory, setSelectedCategory] = useState<Category>();
 
   useEffect(() => {
     // get transactions from db between time period
     window.electron.ipcRenderer.once('db-query-transactions', (resp) => {
       const response = resp as Transaction[];
+      setTransactionsAll(response);
       // filter out transactions that are not in the time period
       const filteredTransactions = response.filter((transaction) => {
         const transactionDate = new Date(transaction.date);
@@ -336,11 +594,11 @@ function Dashboard() {
           transactionDate <= timePeriod.endDate
         );
       });
-      console.log(filteredTransactions.length);
       setTransactions(filteredTransactions);
     });
     window.electron.ipcRenderer.once('db-query-categories-expense', (resp) => {
       const response = resp as Category[];
+      setSelectedCategory(response[0]);
       setCategoriesExpense(response);
     });
     window.electron.ipcRenderer.once('db-query-categories-income', (resp) => {
@@ -369,6 +627,10 @@ function Dashboard() {
   const transactionsIncome = transactions.filter(
     (transaction) => transaction.amount > 0
   );
+  // wait for use state to be set before returning
+  if (selectedCategory === undefined) {
+    return <div>Loading...</div>;
+  }
   return (
     <div className="dashboard-container">
       <div className="time-period-selector-container">
@@ -383,6 +645,22 @@ function Dashboard() {
         </div>
         <div className="bar-chart-container">
           {IncomeEarningSavingsComparison(transactions)}
+        </div>
+        <div className="budget-comparison-container">
+          <div className="category-selector-container">
+            <CategorySelector
+              onCategoryChange={setSelectedCategory}
+              categories={categoriesExpense}
+            />
+            <IntervalSelector onIntervalChange={setInterval} />
+          </div>
+          <div className="bar-chart-container">
+            {budgetComparisonBarChart(
+              interval,
+              selectedCategory,
+              transactionsAll
+            )}
+          </div>
         </div>
       </div>
     </div>
