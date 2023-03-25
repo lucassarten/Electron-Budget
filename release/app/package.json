@@ -1,6 +1,6 @@
 {
   "name": "electron-budget",
-  "version": "0.0.5",
+  "version": "1.0.0",
   "description": "Budget tracking application",
   "main": "./dist/main/main.js",
   "private": true,
@@ -9,5 +9,8 @@
     "postinstall": "npm run rebuild && npm run link-modules",
     "link-modules": "node -r ts-node/register ../../.erb/scripts/link-modules.ts"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@electron/rebuild": "^3.2.10",
+    "sqlite3": "^5.1.6"
+  }
 }

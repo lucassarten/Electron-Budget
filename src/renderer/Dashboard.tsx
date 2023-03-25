@@ -385,7 +385,9 @@ function budgetComparisonBarChart(
   }
   const actuals = periods.map((period) => {
     const periodTransactions = period.filter(
-      (transaction) => transaction.category === category.name
+      (transaction) =>
+        transaction.category === category.name &&
+        (type === 'Income' ? transaction.amount > 0 : transaction.amount < 0)
     );
     return periodTransactions.reduce(
       (acc, transaction) => acc + Math.abs(transaction.amount),
@@ -420,6 +422,9 @@ function budgetComparisonBarChart(
             )} vs Actual`,
             color: 'black',
             position: 'top',
+            padding: {
+              bottom: 20,
+            },
           },
           datalabels: {
             anchor: 'end',

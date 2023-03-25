@@ -205,7 +205,10 @@ function TransactionsTable({ type }: any) {
   }>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
-
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
   useEffect(() => {
     window.electron.ipcRenderer.once('db-query-transactions', (resp) => {
       const response = resp as Transaction[];
@@ -346,6 +349,12 @@ function TransactionsTable({ type }: any) {
     [categories, handleSaveCell, validationErrors]
   );
 
+  const categoriesMap = categories.map((category) => (
+    <MenuItem key={category.name} value={category.name}>
+      {category.name}
+    </MenuItem>
+  ));
+
   const columns = useMemo<MRT_ColumnDef<Transaction>[]>(
     () => [
       {
@@ -406,16 +415,12 @@ function TransactionsTable({ type }: any) {
         size: 50,
         muiTableBodyCellEditTextFieldProps: ({ cell }) => ({
           select: true,
-          children: categories.map((category) => (
-            <MenuItem key={category.name} value={category.name}>
-              {category.name}
-            </MenuItem>
-          )),
+          children: categoriesMap,
           ...getCommonEditTextFieldProps(cell),
         }),
       },
     ],
-    [categories, getCommonEditTextFieldProps]
+    [categoriesMap, getCommonEditTextFieldProps]
   );
 
   return (
@@ -424,14 +429,16 @@ function TransactionsTable({ type }: any) {
         muiTableContainerProps={
           {
             style: {
-              maxHeight: 'calc(100vh - 100px)',
+              maxHeight: 'calc(100vh - 150px)',
             },
           } as any
         }
-        enableBottomToolbar={false}
-        enableStickyFooter={false}
+        enableBottomToolbar
+        enableTopToolbar
+        enableStickyFooter
         enableStickyHeader
-        enablePagination={false}
+        enablePagination
+        onPaginationChange={setPagination}
         columns={columns}
         data={tableData}
         enableColumnOrdering
@@ -439,7 +446,7 @@ function TransactionsTable({ type }: any) {
         enableEditing
         enableRowSelection
         onRowSelectionChange={setRowSelection}
-        state={{ rowSelection }}
+        state={{ rowSelection, pagination }}
         getRowId={(row) => row.id}
         renderTopToolbarCustomActions={() => (
           <span className="table-top-toolbar-container">

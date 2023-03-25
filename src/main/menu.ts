@@ -11,16 +11,9 @@ import db from './db';
 const fs = require('fs');
 
 // specific references to ignore, these are transfers between my own accounts for example, these rows are dropped
-const ignore = [
-  'Tf To',
-  'Tf Fr',
-  'T/f from',
-  'T/f to',
-  'TRANSFER TO',
-  'TRANSFER FROM',
-];
+const ignore = 'Tf To|Tf Fr|T/f from|T/f to|TRANSFER|TRANSFER';
 // specific phrases to remove, these rows aren't dropped just cleaned for the below strings
-const remove = [';Ref:', ';Particulars:', ';Balance:', ';'];
+const remove = ';Ref:|;Particulars:|;Balance:|;';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
@@ -57,17 +50,24 @@ function importFile(fileName: string, type: string) {
           row[2].trim(),
           row[14].trim(),
         ]);
+        // convert to date format d-m-yyyy, data is in format dd-mm-yyyy
+        content = content.map((row) => {
+          const date = row[0].split('-');
+          return [
+            `${date[1]}-${date[0]}-${date[2].substring(2)}`,
+            row[1],
+            row[2],
+          ];
+        });
       }
       // remove ignored rows
-      content = content.filter((row) => !ignore.includes(row[1]));
+      content = content.filter((row) => !row[1].match(ignore));
       // remove unwanted strings
-      remove.forEach((str) => {
-        content = content.map((row) => [
-          row[0],
-          row[1].replace(str, ''),
-          row[2],
-        ]);
-      });
+      content = content.map((row) => [
+        row[0],
+        row[1].replace(remove, ''),
+        row[2],
+      ]);
       // add default category
       content = content.map((row) => [...row, '❓ Other']);
       // add to db in a transaction
