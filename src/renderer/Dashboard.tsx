@@ -347,7 +347,8 @@ function IncomeEarningSavingsComparison(transactions: Transaction[]) {
 function budgetComparisonBarChart(
   timePeriod: TimePeriod,
   category: Category,
-  transactions: Transaction[]
+  transactions: Transaction[],
+  type: string
 ) {
   // split all transactions into periods of time timePeriod long (e.g. 10 periods of 1 month each)
   const timePeriodLength =
@@ -404,7 +405,7 @@ function budgetComparisonBarChart(
           {
             label: 'Actual',
             data: actuals.reverse(),
-            backgroundColor: 'red',
+            backgroundColor: type === 'Income' ? 'green' : 'red',
             barPercentage: 0.9,
           },
         ],
@@ -419,7 +420,9 @@ function budgetComparisonBarChart(
           },
           title: {
             display: true,
-            text: `Implied Budget of ${formatCurrency(budget)} vs Actual`,
+            text: `Implied ${type} Budget of ${formatCurrency(
+              budget
+            )} vs Actual`,
             color: 'black',
             position: 'top',
           },
@@ -574,12 +577,20 @@ function Dashboard() {
     startDate: new Date(0),
     endDate: new Date(),
   });
-  const [interval, setInterval] = useState<TimePeriod>({
+  const [intervalExpense, setIntervalExpense] = useState<TimePeriod>({
     // default 1 week
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
     endDate: new Date(),
   });
-  const [selectedCategory, setSelectedCategory] = useState<Category>();
+  const [intervalIncome, setIntervalIncome] = useState<TimePeriod>({
+    // default 1 week
+    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    endDate: new Date(),
+  });
+  const [selectedCategoryExpense, setSelectedCategoryExpense] =
+    useState<Category>();
+  const [selectedCategoryIncome, setSelectedCategoryIncome] =
+    useState<Category>();
 
   useEffect(() => {
     // get transactions from db between time period
@@ -598,11 +609,12 @@ function Dashboard() {
     });
     window.electron.ipcRenderer.once('db-query-categories-expense', (resp) => {
       const response = resp as Category[];
-      setSelectedCategory(response[0]);
+      setSelectedCategoryExpense(response[0]);
       setCategoriesExpense(response);
     });
     window.electron.ipcRenderer.once('db-query-categories-income', (resp) => {
       const response = resp as Category[];
+      setSelectedCategoryIncome(response[0]);
       setCategoriesIncome(response);
     });
     // get categories from db
@@ -628,7 +640,10 @@ function Dashboard() {
     (transaction) => transaction.amount > 0
   );
   // wait for use state to be set before returning
-  if (selectedCategory === undefined) {
+  if (
+    selectedCategoryIncome === undefined ||
+    selectedCategoryExpense === undefined
+  ) {
     return <div>Loading...</div>;
   }
   return (
@@ -636,30 +651,56 @@ function Dashboard() {
       <div className="time-period-selector-container">
         <TimePeriodSelector onTimePeriodChange={setTimePeriod} />
       </div>
-      <div className="dashboard-grid">
-        <div className="pie-chart-container">
-          {categoryPieChart('Expense', categoriesExpense, transactionsExpense)}
-        </div>
-        <div className="pie-chart-container">
-          {categoryPieChart('Income', categoriesIncome, transactionsIncome)}
-        </div>
-        <div className="bar-chart-container">
-          {IncomeEarningSavingsComparison(transactions)}
-        </div>
-        <div className="budget-comparison-container">
-          <div className="category-selector-container">
-            <CategorySelector
-              onCategoryChange={setSelectedCategory}
-              categories={categoriesExpense}
-            />
-            <IntervalSelector onIntervalChange={setInterval} />
-          </div>
+      <div className="dashboard-graph-container">
+        <div className="dashboard-chart-grid">
           <div className="bar-chart-container">
-            {budgetComparisonBarChart(
-              interval,
-              selectedCategory,
-              transactionsAll
+            {IncomeEarningSavingsComparison(transactions)}
+          </div>
+          <div className="pie-chart-container">
+            {categoryPieChart(
+              'Expense',
+              categoriesExpense,
+              transactionsExpense
             )}
+          </div>
+          <div className="pie-chart-container">
+            {categoryPieChart('Income', categoriesIncome, transactionsIncome)}
+          </div>
+        </div>
+        <div className="dashboard-comparison-grid">
+          <div className="budget-comparison-container">
+            <div className="category-selector-container">
+              <CategorySelector
+                onCategoryChange={setSelectedCategoryExpense}
+                categories={categoriesExpense}
+              />
+              <IntervalSelector onIntervalChange={setIntervalExpense} />
+            </div>
+            <div className="comparison-chart-container">
+              {budgetComparisonBarChart(
+                intervalExpense,
+                selectedCategoryExpense,
+                transactionsAll,
+                'Expense'
+              )}
+            </div>
+          </div>
+          <div className="budget-comparison-container">
+            <div className="category-selector-container">
+              <CategorySelector
+                onCategoryChange={setSelectedCategoryIncome}
+                categories={categoriesIncome}
+              />
+              <IntervalSelector onIntervalChange={setIntervalIncome} />
+            </div>
+            <div className="comparison-chart-container">
+              {budgetComparisonBarChart(
+                intervalIncome,
+                selectedCategoryIncome,
+                transactionsAll,
+                'Income'
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -5,7 +5,7 @@
   justify-content: center;
   align-items: center;
   overflow-y: hidden;
-  gap: 50px;
+  gap: 30px;
   width: 100%;
 }
 
@@ -15,12 +15,14 @@
 }
 
 .expense-targets-table {
-  width: 40%;
+  width: 47%;
+  margin-top: 10px;
   height: calc(100vh - 50px);
 }
 
 .income-targets-table {
-  width: 40%;
+  width: 47%;
+  margin-top: 10px;
   height: calc(100vh - 50px);
 }
 
