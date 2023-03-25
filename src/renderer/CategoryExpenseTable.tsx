@@ -88,7 +88,7 @@ export function AddCategoryModal({
                 error={!validateRequired(values.name)}
               />
             ))}
-            {columns.slice(1).map((column) => (
+            {columns.slice(1, 2).map((column) => (
               <TextField
                 key={column.accessorKey}
                 label={column.header}
@@ -102,6 +102,16 @@ export function AddCategoryModal({
                   !validateAmount(values.target)
                     ? `${column.accessorKey} must be a positive number`
                     : ''
+                }
+              />
+            ))}
+            {columns.slice(2).map((column) => (
+              <TextField
+                key={column.accessorKey}
+                label={column.header}
+                name={column.accessorKey}
+                onChange={(e) =>
+                  setValues({ ...values, [e.target.name]: e.target.value })
                 }
               />
             ))}
@@ -160,7 +170,7 @@ function CategoryExpenseTable() {
     // insert row into db
     window.electron.ipcRenderer.sendMessage('db-query', [
       '',
-      `INSERT INTO CategoriesExpense (name, target) VALUES ('${values.name}', ${values.target})`,
+      `INSERT INTO CategoriesExpense (name, target, colour) VALUES ('${values.name}', ${values.target}, '${values.colour}')`,
     ]);
     setTableData([...tableData]);
   };
@@ -175,6 +185,9 @@ function CategoryExpenseTable() {
         case 'target':
           tableData[cell.row.index].target = value;
           break;
+        case 'colour':
+          tableData[cell.row.index].colour = value;
+          break;
         default:
           break;
       }
@@ -183,9 +196,9 @@ function CategoryExpenseTable() {
         '',
         `UPDATE CategoriesExpense SET name = '${
           tableData[cell.row.index].name
-        }', target = ${tableData[cell.row.index].target} WHERE name = '${
-          tableData[cell.row.index].name
-        }'`,
+        }', target = ${tableData[cell.row.index].target},
+        colour = '${tableData[cell.row.index].colour}'
+        WHERE name = '${tableData[cell.row.index].name}'`,
       ]);
       setTableData([...tableData]);
     },
@@ -195,15 +208,12 @@ function CategoryExpenseTable() {
   const handleDeleteRows = useCallback(() => {
     // loop through selected rows and delete them from tableData
     const newTableData = tableData.filter((row) => !rowSelection[row.name]);
-    console.log(rowSelection);
     // delete rows from db
     const query = `DELETE FROM CategoriesIncome WHERE name IN (${Object.keys(
       rowSelection
     )
       .map((key) => `"${key}"`)
       .join(', ')})`;
-
-    console.log(query);
     window.electron.ipcRenderer.sendMessage('db-query', ['', query]);
     setTableData(newTableData);
     setRowSelection({});
@@ -291,6 +301,14 @@ function CategoryExpenseTable() {
         // format as currency
         Cell: ({ cell }) => formatCurrency(cell.getValue() as number),
       },
+      {
+        accessorKey: 'colour',
+        header: 'colour',
+        size: 50,
+        muiTableBodyCellEditTextFieldProps: ({ cell }) => ({
+          ...getCommonEditTextFieldProps(cell),
+        }),
+      },
     ],
     [getCommonEditTextFieldProps]
   );
@@ -311,6 +329,17 @@ function CategoryExpenseTable() {
         columns={columns}
         data={tableData}
         editingMode="table"
+        // set colour cell background to value
+        muiTableBodyCellProps={({ cell }) => {
+          if (cell.column.id === 'colour') {
+            return {
+              style: {
+                backgroundColor: cell.getValue(),
+              },
+            };
+          }
+          return {};
+        }}
         enableEditing
         enableRowSelection
         onRowSelectionChange={setRowSelection}

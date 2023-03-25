@@ -197,45 +197,34 @@ function categoryPieChart(
   categories: Category[],
   transactions: Transaction[]
 ) {
+  const categoriesPeriod = categories.filter((category) => {
+    const categoryTransactions = transactions.filter(
+      (transaction) => transaction.category === category.name
+    );
+    return categoryTransactions.length > 0;
+  });
   return (
     <Pie
       data={{
-        labels: categories
-          .filter((category) => {
-            const categoryTransactions = transactions.filter(
-              (transaction) => transaction.category === category.name
-            );
-            return categoryTransactions.length > 0;
-          })
-          .map((category) => category.name),
+        labels: categoriesPeriod.map((category) => category.name),
         datasets: [
           {
-            label: 'Expenses',
-            data: categories
-              .filter((category) => {
-                const categoryTransactions = transactions.filter(
-                  (transaction) => transaction.category === category.name
-                );
-                return categoryTransactions.length > 0;
-              })
-              .map((category) => {
-                const categoryTransactions = transactions.filter(
-                  (transaction) => transaction.category === category.name
-                );
-                if (categoryTransactions.length === 0) {
-                  return 0;
-                }
-                return categoryTransactions.reduce(
-                  (acc, transaction) => acc + transaction.amount,
-                  0
-                );
-              }),
-            backgroundColor: categories.map(() => {
-              const randomColor = Math.floor(Math.random() * 0xffffff).toString(
-                16
+            label: type,
+            data: categoriesPeriod.map((category) => {
+              const categoryTransactions = transactions.filter(
+                (transaction) => transaction.category === category.name
               );
-              return `#${randomColor}`;
+              if (categoryTransactions.length === 0) {
+                return 0;
+              }
+              return categoryTransactions.reduce(
+                (acc, transaction) => acc + transaction.amount,
+                0
+              );
             }),
+            backgroundColor: categoriesPeriod.map(
+              (category) => category.colour
+            ),
           },
         ],
       }}
@@ -248,9 +237,12 @@ function categoryPieChart(
           },
           title: {
             display: true,
-            text: `${type ? 'Income' : 'Expenses'} by Category`,
+            text: `${type === 'Income' ? 'Income' : 'Expenses'} by Category`,
             color: 'black',
             position: 'top',
+            padding: {
+              bottom: 20,
+            },
           },
           datalabels: {
             anchor: 'center',
@@ -310,9 +302,12 @@ function IncomeEarningSavingsComparison(transactions: Transaction[]) {
           },
           title: {
             display: true,
-            text: 'Income, Expenses, and Savings',
+            text: 'Summary',
             color: 'black',
             position: 'top',
+            padding: {
+              bottom: 20,
+            },
           },
           datalabels: {
             anchor: 'end',

@@ -10,4 +10,5 @@ export type Category = {
   name: string;
   type: string;
   target: number;
+  colour: string;
 };
