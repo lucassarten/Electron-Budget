@@ -20,7 +20,6 @@ const UPDATE_CHECK_INTERVAL = 10 * 60 * 1000;
 // });
 
 setInterval(() => {
-  console.log('Checking for updates...');
   autoUpdater.checkForUpdates();
 }, UPDATE_CHECK_INTERVAL);
 
@@ -32,7 +31,6 @@ class AppUpdater {
       provider: 'generic',
       url,
     });
-    console.log('Checking for updates...');
     autoUpdater.checkForUpdates();
   }
 }
@@ -59,15 +57,7 @@ autoUpdater.on('update-downloaded', () => {
 
 let mainWindow: BrowserWindow | null = null;
 
-ipcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
-});
-
 ipcMain.on('db-query', async (event, args) => {
-  // record time taken for query
-  const start = Date.now();
   const respChannel = args[0];
   const sqlQuery = args[1];
   // query the db
@@ -79,13 +69,7 @@ ipcMain.on('db-query', async (event, args) => {
         resolve(rows);
       }
     });
-  }).catch((err: any) => {
-    console.log(err);
-  });
-  // log time taken
-  console.log(sqlQuery);
-  console.log(result);
-  console.log(`Query took ${Date.now() - start}ms`);
+  }).catch(() => {});
   // send the result back to the renderer
   event.reply(respChannel, result);
 });

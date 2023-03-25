@@ -82,8 +82,6 @@ export function AddTransactionModal({
     onClose();
   };
 
-  console.log(categories);
-
   return (
     <Dialog open={open}>
       <DialogTitle textAlign="center">Add {type}</DialogTitle>
@@ -285,12 +283,10 @@ function TransactionsTable({ type }: any) {
   const handleDeleteRows = useCallback(() => {
     // loop through selected rows and delete them from tableData
     const newTableData = tableData.filter((row) => !rowSelection[row.id]);
-    console.log(rowSelection);
     // delete rows from db
     const query = `DELETE FROM Transactions WHERE id IN (${
       Object.keys(rowSelection) as string[]
     })`;
-    console.log(query);
     window.electron.ipcRenderer.sendMessage('db-query', ['', query]);
     setTableData(newTableData);
     setRowSelection({});
