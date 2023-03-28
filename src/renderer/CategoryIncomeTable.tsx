@@ -319,7 +319,7 @@ function CategoryIncomeTable() {
         muiTableContainerProps={
           {
             style: {
-              maxHeight: 'calc(100vh - 150px)',
+              maxHeight: 'calc(100vh - 121px)',
             },
           } as any
         }

@@ -6,11 +6,16 @@ import TransactionsTable from './TransactionsTable';
 import Dashboard from './Dashboard';
 import CategoryExpenseTable from './CategoryExpenseTable';
 import CategoryIncomeTable from './CategoryIncomeTable';
+import Statistics from './Statistics';
 
-type Tab = 'dashboard' | 'income' | 'expenses' | 'budgetTargets';
+type Tab = 'dashboard' | 'statistics' | 'income' | 'expenses' | 'budgetTargets';
 
 function DashboardView() {
   return <Dashboard />;
+}
+
+function StatisticsView() {
+  return <Statistics />;
 }
 
 function IncomeView() {
@@ -57,10 +62,12 @@ function MainLayout() {
         <button
           type="button"
           id="tab"
-          className={`tab-income ${activeTab === 'income' ? 'active' : ''}`}
-          onClick={() => handleTabClick('income')}
+          className={`tab-statistics ${
+            activeTab === 'statistics' ? 'active' : ''
+          }`}
+          onClick={() => handleTabClick('statistics')}
         >
-          Income
+          Statistics
         </button>
         <button
           type="button"
@@ -69,6 +76,14 @@ function MainLayout() {
           onClick={() => handleTabClick('expenses')}
         >
           Expenses
+        </button>
+        <button
+          type="button"
+          id="tab"
+          className={`tab-income ${activeTab === 'income' ? 'active' : ''}`}
+          onClick={() => handleTabClick('income')}
+        >
+          Income
         </button>
         <button
           type="button"
@@ -83,8 +98,9 @@ function MainLayout() {
       </div>
 
       {activeTab === 'dashboard' && <DashboardView />}
-      {activeTab === 'income' && <IncomeView />}
+      {activeTab === 'statistics' && <StatisticsView />}
       {activeTab === 'expenses' && <ExpensesView />}
+      {activeTab === 'income' && <IncomeView />}
       {activeTab === 'budgetTargets' && <BudgetTargetsView />}
     </div>
   );

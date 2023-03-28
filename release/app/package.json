@@ -10,7 +10,6 @@
     "link-modules": "node -r ts-node/register ../../.erb/scripts/link-modules.ts"
   },
   "dependencies": {
-    "@electron/rebuild": "^3.2.10",
     "sqlite3": "^5.1.6"
   }
 }

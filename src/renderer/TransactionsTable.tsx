@@ -424,12 +424,12 @@ function TransactionsTable({ type }: any) {
   );
 
   return (
-    <div className="transactions-table">
+    <div className={`transactions-table-${type}`}>
       <MaterialReactTable
         muiTableContainerProps={
           {
             style: {
-              maxHeight: 'calc(100vh - 150px)',
+              maxHeight: 'calc(100vh - 167px)',
             },
           } as any
         }
