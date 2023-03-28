@@ -2,6 +2,7 @@
 @import url("TabBar.css");
 @import url("TransactionsTable.css");
 @import url("TargetTable.css");
+@import url("Statistics.css");
 @import url("Theme.css");
 
 body {
@@ -13,7 +14,7 @@ body {
   align-items: center;
   overflow: hidden;
   margin: 0;
-  min-width: 700px;
+  min-width: 855px;
 }
 
 #root {

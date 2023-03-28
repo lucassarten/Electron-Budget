@@ -36,6 +36,18 @@
   background-color: var(--tab-dashboard-active);
 }
 
+.tab-statistics {
+  background-color: var(--tab-statistics);
+}
+
+.tab-statistics:hover {
+  background-color: var(--tab-statistics-hover);
+}
+
+.tab-statistics.active {
+  background-color: var(--tab-statistics-active);
+}
+
 .tab-income {
   background-color: var(--tab-income);
 }

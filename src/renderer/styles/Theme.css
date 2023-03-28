@@ -4,6 +4,9 @@
   --tab-dashboard: #2E5B9E;
   --tab-dashboard-hover: #4276b9;
   --tab-dashboard-active: #4276b9;
+  --tab-statistics: #22948e;
+  --tab-statistics-hover: #26a6a0;
+  --tab-statistics-active: #26a6a0;
   --tab-income: #75A52E;
   --tab-income-hover: #83b834;
   --tab-income-active: #83b834;
@@ -26,4 +29,11 @@
   --button-add-category: #75A52E;
   --button-delete-category: #A63D26;
   --button-delete-category-disabled: #c0c0c0;
+  /* table borders */
+  --general-border: #c0c0c0;
+  --expense-border: #be492f;
+  --income-border: #83b834;
+  --statistics-border: #26a6a0;
+  --dashboard-border: #4276b9;
+  --budget-targets-border: #7d34c7;
 }

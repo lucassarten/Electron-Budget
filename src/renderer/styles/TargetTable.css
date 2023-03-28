@@ -1,12 +1,11 @@
 /* display contents side by side */
 .target-tables-container {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   overflow-y: hidden;
-  gap: 30px;
-  width: 100%;
+  width: calc(100% - 10px);
+  height: calc(100vh - 51px);
+  border: 5px solid var(--budget-targets-border);
 }
 
 .targets-table {
@@ -15,15 +14,13 @@
 }
 
 .expense-targets-table {
-  width: 47%;
-  margin-top: 10px;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 61px);
+  border: 5px solid var(--expense-border);
 }
 
 .income-targets-table {
-  width: 47%;
-  margin-top: 10px;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 61px);
+  border: 5px solid var(--income-border);
 }
 
 .button-add-category {

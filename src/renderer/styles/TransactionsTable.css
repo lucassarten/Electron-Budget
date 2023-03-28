@@ -1,6 +1,13 @@
-.transactions-table {
-  width: 100%;
+.transactions-table-Expense {
+  width: calc(100% - 10px);
   height: calc(100% - 50px);
+  border: 5px solid var(--expense-border);
+}
+
+.transactions-table-Income {
+  width: calc(100% - 10px);
+  height: calc(100% - 50px);
+  border: 5px solid var(--income-border);
 }
 
 .table-top-toolbar-container {
