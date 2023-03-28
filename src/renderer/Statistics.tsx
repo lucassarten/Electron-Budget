@@ -447,7 +447,15 @@ function StatisticsByCategory(
                     <TableCell>{formatCurrency(totalCategory)}</TableCell>
                     <TableCell
                       style={{
-                        color: totalCategoryChange < 0 ? 'green' : 'red',
+                        color:
+                          // eslint-disable-next-line no-nested-ternary
+                          type === 'Expense'
+                            ? totalCategoryChange < 0
+                              ? 'green'
+                              : 'red'
+                            : totalCategoryChange > 0
+                            ? 'green'
+                            : 'red',
                       }}
                     >
                       {formatCurrency(totalCategoryChange)} (
