@@ -1,3 +1,5 @@
+/* eslint-disable promise/always-return */
+/* eslint-disable promise/catch-or-return */
 /* eslint-disable no-nested-ternary */
 /* eslint-disable camelcase */
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -19,7 +21,8 @@ import {
 
 import { buttonStyleAdd, buttonStyleCancel } from './styles/MUI';
 
-import { Category, Transaction } from './types';
+import { Category, Transaction } from './Types';
+import dbQuery from './db';
 
 const formatCurrency = (value: number) => {
   const formatter = new Intl.NumberFormat('en-US', {
@@ -210,26 +213,18 @@ function TransactionsTable({ type }: any) {
     pageSize: 20,
   });
   useEffect(() => {
-    window.electron.ipcRenderer.once('db-query-transactions', (resp) => {
-      const response = resp as Transaction[];
-      setTableData(response);
-    });
-    window.electron.ipcRenderer.once('db-query-categories', (resp) => {
-      const response = resp as Category[];
-      setCategories(response);
-    });
-    // get categories from db
-    window.electron.ipcRenderer.sendMessage('db-query', [
-      'db-query-categories',
-      `SELECT * FROM Categories${type}`,
-    ]);
     // get positive transactions from db
-    window.electron.ipcRenderer.sendMessage('db-query', [
-      'db-query-transactions',
+    dbQuery(
       `SELECT * FROM Transactions WHERE ${
         type === 'Income' ? 'amount > 0' : 'amount < 0'
-      }`,
-    ]);
+      }`
+    ).then((resp) => {
+      setTableData(resp as Transaction[]);
+    });
+    // get categories from db
+    dbQuery(`SELECT * FROM Categories${type}`).then((resp) => {
+      setCategories(resp as Category[]);
+    });
   }, [type]);
 
   const handleCreateNewRow = (values: Transaction) => {
@@ -241,10 +236,9 @@ function TransactionsTable({ type }: any) {
     }
     tableData.push(values);
     // insert row into db
-    window.electron.ipcRenderer.sendMessage('db-query', [
-      '',
-      `INSERT INTO Transactions (date, description, amount, category) VALUES ('${values.date}', '${values.description}', ${values.amount}, '${values.category}')`,
-    ]);
+    dbQuery(
+      `INSERT INTO Transactions (date, description, amount, category) VALUES ('${values.date}', '${values.description}', ${values.amount}, '${values.category}')`
+    );
     setTableData([...tableData]);
   };
 
@@ -268,16 +262,15 @@ function TransactionsTable({ type }: any) {
           break;
       }
       // update row in db
-      window.electron.ipcRenderer.sendMessage('db-query', [
-        '',
+      dbQuery(
         `UPDATE Transactions SET date = '${
           tableData[cell.row.index].date
         }', description = '${
           tableData[cell.row.index].description
         }', amount = ${tableData[cell.row.index].amount}, category = '${
           tableData[cell.row.index].category
-        }' WHERE id = ${tableData[cell.row.index].id}`,
-      ]);
+        }' WHERE id = ${tableData[cell.row.index].id}`
+      );
       setTableData([...tableData]);
     },
     [tableData]
@@ -290,7 +283,7 @@ function TransactionsTable({ type }: any) {
     const query = `DELETE FROM Transactions WHERE id IN (${
       Object.keys(rowSelection) as string[]
     })`;
-    window.electron.ipcRenderer.sendMessage('db-query', ['', query]);
+    dbQuery(query);
     setTableData(newTableData);
     setRowSelection({});
   }, [rowSelection, tableData]);

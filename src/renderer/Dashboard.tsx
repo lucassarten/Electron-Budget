@@ -1,3 +1,5 @@
+/* eslint-disable promise/catch-or-return */
+/* eslint-disable promise/always-return */
 /* eslint-disable react/destructuring-assignment */
 import { Chart, registerables } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
@@ -13,7 +15,7 @@ import {
   SelectChangeEvent,
   MenuItem,
 } from '@mui/material';
-import { Category, Transaction } from './types';
+import { Category, Transaction } from './Types';
 import dbQuery from './db';
 
 interface TimePeriod {
@@ -595,45 +597,30 @@ function Dashboard() {
 
   useEffect(() => {
     // get transactions from db between time period
-    dbQuery(`SELECT * FROM Transactions`)
-      .then((resp) => {
-        const response = resp as Transaction[];
-        setTransactionsAll(response);
-        // filter out transactions that are not in the time period
-        const filteredTransactions = response.filter((transaction) => {
-          const transactionDate = new Date(transaction.date);
-          return (
-            transactionDate >= timePeriod.startDate &&
-            transactionDate <= timePeriod.endDate
-          );
-        });
-        setTransactions(filteredTransactions);
-        return null;
-      })
-      .catch((error) => {
-        console.error(error);
+    dbQuery(`SELECT * FROM Transactions`).then((resp) => {
+      const response = resp as Transaction[];
+      setTransactionsAll(response);
+      // filter out transactions that are not in the time period
+      const filteredTransactions = response.filter((transaction) => {
+        const transactionDate = new Date(transaction.date);
+        return (
+          transactionDate >= timePeriod.startDate &&
+          transactionDate <= timePeriod.endDate
+        );
       });
+      setTransactions(filteredTransactions);
+    });
     // get categories from db
-    dbQuery(`SELECT * FROM CategoriesExpense`)
-      .then((resp) => {
-        const response = resp as Category[];
-        setSelectedCategoryExpense(response[0]);
-        setCategoriesExpense(response);
-        return null;
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-    dbQuery(`SELECT * FROM CategoriesIncome`)
-      .then((resp) => {
-        const response = resp as Category[];
-        setSelectedCategoryIncome(response[0]);
-        setCategoriesIncome(response);
-        return null;
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+    dbQuery(`SELECT * FROM CategoriesExpense`).then((resp) => {
+      const response = resp as Category[];
+      setSelectedCategoryExpense(response[0]);
+      setCategoriesExpense(response);
+    });
+    dbQuery(`SELECT * FROM CategoriesIncome`).then((resp) => {
+      const response = resp as Category[];
+      setSelectedCategoryIncome(response[0]);
+      setCategoriesIncome(response);
+    });
   }, [timePeriod]);
 
   const transactionsExpense = transactions.filter(

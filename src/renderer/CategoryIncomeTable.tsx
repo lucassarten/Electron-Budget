@@ -1,3 +1,5 @@
+/* eslint-disable promise/always-return */
+/* eslint-disable promise/catch-or-return */
 /* eslint-disable no-nested-ternary */
 /* eslint-disable camelcase */
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -19,6 +21,7 @@ import {
 import { buttonStyleAdd, buttonStyleCancel } from './styles/MUI';
 
 import { Category } from './Types';
+import dbQuery from './db';
 
 const validateRequired = (value: string) => !!value.length;
 const formatCurrency = (value: number) => {
@@ -154,27 +157,20 @@ function CategoryIncomeTable() {
   const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
 
   useEffect(() => {
-    window.electron.ipcRenderer.once('db-query-categories-income', (resp) => {
-      const response = resp as Category[];
-      setTableData(response);
-    });
     // get categories from db
-    window.electron.ipcRenderer.sendMessage('db-query', [
-      'db-query-categories-income',
-      `SELECT * FROM CategoriesIncome`,
-    ]);
+    dbQuery(`SELECT * FROM CategoriesIncome`).then((resp) => {
+      setTableData(resp as Category[]);
+    });
   }, []);
 
   const handleCreateNewRow = (values: Category) => {
     tableData.push(values);
     // insert row into db
-    window.electron.ipcRenderer.sendMessage('db-query', [
-      '',
-      `INSERT INTO CategoriesExpense (name, target, colour) VALUES ('${values.name}', ${values.target}, '${values.colour}')`,
-    ]);
+    dbQuery(
+      `INSERT INTO CategoriesExpense (name, target, colour) VALUES ('${values.name}', ${values.target}, '${values.colour}')`
+    );
     setTableData([...tableData]);
   };
-
   const handleSaveCell = useCallback(
     (cell: MRT_Cell<Category>, value: any) => {
       // there is probably a better way to do this
@@ -192,14 +188,13 @@ function CategoryIncomeTable() {
           break;
       }
       // update row in db
-      window.electron.ipcRenderer.sendMessage('db-query', [
-        '',
+      dbQuery(
         `UPDATE CategoriesIncome SET name = '${
           tableData[cell.row.index].name
         }', target = ${tableData[cell.row.index].target},
         colour = '${tableData[cell.row.index].colour}'
-        WHERE name = '${tableData[cell.row.index].name}'`,
-      ]);
+        WHERE name = '${tableData[cell.row.index].name}'`
+      );
       setTableData([...tableData]);
     },
     [tableData]
