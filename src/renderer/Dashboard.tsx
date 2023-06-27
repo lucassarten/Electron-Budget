@@ -14,6 +14,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Category, Transaction } from './types';
+import dbQuery from './db';
 
 interface TimePeriod {
   startDate: Date;
@@ -594,43 +595,45 @@ function Dashboard() {
 
   useEffect(() => {
     // get transactions from db between time period
-    window.electron.ipcRenderer.once('db-query-transactions', (resp) => {
-      const response = resp as Transaction[];
-      setTransactionsAll(response);
-      // filter out transactions that are not in the time period
-      const filteredTransactions = response.filter((transaction) => {
-        const transactionDate = new Date(transaction.date);
-        return (
-          transactionDate >= timePeriod.startDate &&
-          transactionDate <= timePeriod.endDate
-        );
+    dbQuery(`SELECT * FROM Transactions`)
+      .then((resp) => {
+        const response = resp as Transaction[];
+        setTransactionsAll(response);
+        // filter out transactions that are not in the time period
+        const filteredTransactions = response.filter((transaction) => {
+          const transactionDate = new Date(transaction.date);
+          return (
+            transactionDate >= timePeriod.startDate &&
+            transactionDate <= timePeriod.endDate
+          );
+        });
+        setTransactions(filteredTransactions);
+        return null;
+      })
+      .catch((error) => {
+        console.error(error);
       });
-      setTransactions(filteredTransactions);
-    });
-    window.electron.ipcRenderer.once('db-query-categories-expense', (resp) => {
-      const response = resp as Category[];
-      setSelectedCategoryExpense(response[0]);
-      setCategoriesExpense(response);
-    });
-    window.electron.ipcRenderer.once('db-query-categories-income', (resp) => {
-      const response = resp as Category[];
-      setSelectedCategoryIncome(response[0]);
-      setCategoriesIncome(response);
-    });
     // get categories from db
-    window.electron.ipcRenderer.sendMessage('db-query', [
-      'db-query-categories-expense',
-      `SELECT * FROM CategoriesExpense`,
-    ]);
-    window.electron.ipcRenderer.sendMessage('db-query', [
-      'db-query-categories-income',
-      `SELECT * FROM CategoriesIncome`,
-    ]);
-    // get transactions from db between time period
-    window.electron.ipcRenderer.sendMessage('db-query', [
-      'db-query-transactions',
-      `SELECT * FROM Transactions`,
-    ]);
+    dbQuery(`SELECT * FROM CategoriesExpense`)
+      .then((resp) => {
+        const response = resp as Category[];
+        setSelectedCategoryExpense(response[0]);
+        setCategoriesExpense(response);
+        return null;
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+    dbQuery(`SELECT * FROM CategoriesIncome`)
+      .then((resp) => {
+        const response = resp as Category[];
+        setSelectedCategoryIncome(response[0]);
+        setCategoriesIncome(response);
+        return null;
+      })
+      .catch((error) => {
+        console.error(error);
+      });
   }, [timePeriod]);
 
   const transactionsExpense = transactions.filter(

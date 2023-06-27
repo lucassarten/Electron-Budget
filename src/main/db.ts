@@ -1,7 +1,14 @@
 // sqlite3 db setup
 const sqlite3 = require('sqlite3');
+const { ipcMain } = require('electron');
 
-const db = new sqlite3.Database('user.db');
+const db = new sqlite3.Database('user.db', (err: any) => {
+  if (err) {
+    console.error(err.message);
+  }
+  console.log('Connected to the user database.');
+});
+
 db.serialize(() => {
   db.run(
     'CREATE TABLE IF NOT EXISTS Transactions (id INTEGER PRIMARY KEY, date TEXT NOT NULL, description TEXT, amount INTEGER NOT NULL, category TEXT)'
@@ -55,4 +62,13 @@ db.serialize(() => {
   });
 });
 
+ipcMain.on('db-query', async (event, query) => {
+  const reply = query[0];
+  const sql = query[1];
+  // query the db
+  db.all(sql, (err: any, rows: unknown) => {
+    // send the result back to the renderer
+    event.reply(reply, (err && err.message) || rows);
+  });
+});
 export default db;

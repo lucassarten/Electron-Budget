@@ -1,12 +1,11 @@
 /* eslint global-require: off, no-console: off, promise/always-return: off */
 
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, shell, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import db from './db';
 
 // auto update config, its defined in app-update.yml anyway but I guess is needed here too
 const server = 'https://hazel-update-server-two.vercel.app';
@@ -56,23 +55,6 @@ autoUpdater.on('update-downloaded', () => {
 });
 
 let mainWindow: BrowserWindow | null = null;
-
-ipcMain.on('db-query', async (event, args) => {
-  const respChannel = args[0];
-  const sqlQuery = args[1];
-  // query the db
-  const result = await new Promise((resolve, reject) => {
-    db.all(sqlQuery.toString(), [], (err: any, rows: unknown) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(rows);
-      }
-    });
-  }).catch(() => {});
-  // send the result back to the renderer
-  event.reply(respChannel, result);
-});
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
